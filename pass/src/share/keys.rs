@@ -45,7 +45,7 @@ impl PassClient {
             if let Some(cached) = cached {
                 let share_keys = cached.get(&share_id);
                 if let Some(cached_share_keys) = share_keys {
-                    println!(">>> Returning cached share keys");
+                    debug!(">>> Returning cached share keys");
                     return Ok(cached_share_keys.clone());
                 }
             }

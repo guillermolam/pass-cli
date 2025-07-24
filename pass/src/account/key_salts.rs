@@ -18,7 +18,6 @@ impl PassClient {
         let salts = fetch_salts(&self.client)
             .await
             .context("failed to fetch salts")?;
-        println!("Fetched salts: {salts:?}");
 
         let passphrases = self
             .client_features
@@ -54,7 +53,6 @@ impl PassClient {
         Ok(KeyPassphrases::new(res))
     }
 
-    #[allow(dead_code)]
     pub(crate) async fn get_key_passphrases(&self) -> Result<KeyPassphrases> {
         let exists = self
             .client_features

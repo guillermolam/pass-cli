@@ -1,5 +1,6 @@
 use crate::ClientFeatures;
 use crate::cache::Cache;
+use anyhow::{Context, Result};
 use muon::Client;
 use std::sync::Arc;
 
@@ -17,5 +18,13 @@ impl PassClient {
             client_features,
             cache: Cache::new(),
         }
+    }
+
+    pub async fn perform_first_time_setup(&self, pass: &str) -> Result<()> {
+        self.setup_key_passphrases(pass)
+            .await
+            .context("Error setting up key passphrases")?;
+
+        Ok(())
     }
 }

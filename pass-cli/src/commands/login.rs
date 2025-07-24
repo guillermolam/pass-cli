@@ -19,12 +19,13 @@ pub async fn run(username: &str, client: Client) -> Result<()> {
     let base_dir = get_base_dir().context("Couldn't get base directory")?;
     let key_provider = Arc::new(CliClientFeatures::new(base_dir));
     let client = PassClient::new(authenticated_client.client, key_provider);
-    client
-        .setup_user_keys(&authenticated_client.password)
-        .await
-        .context("Couldn't setup user keys")?;
 
-    info!("Successfully finished UserKey setup for user: {}", username);
+    client
+        .perform_first_time_setup(&authenticated_client.password)
+        .await
+        .context("Error performing first time setup")?;
+
+    info!("Successfully finished setup for user: {}", username);
 
     let vaults = client.list_vaults().await.context("Couldn't list vaults")?;
     if vaults.is_empty() {
