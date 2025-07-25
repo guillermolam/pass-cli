@@ -6,12 +6,18 @@ use muon::client::flow::LoginFlow;
 use muon::common::{BoxFut, Sender, SenderLayer};
 use muon::env::{Env, EnvId};
 use muon::{App, Client, ProtonRequest, ProtonResponse};
+use std::io::Read;
 
 const ENVIRONMENT_ENV_VAR: &str = "ENVIRONMENT";
 const XDEBUG_SESSION_ENV_VAR: &str = "XDEBUG_SESSION";
 const XDEBUG_SESSION_HEADER: &str = "XDEBUG_SESSION";
 //const APP_HEADER: &str = "Linux-pass@1.0.0";
 const APP_HEADER: &str = "ios-mail@7.1.0";
+
+const PASSWORD_ENV_VAR: &str = "PROTON_PASS_PASSWORD";
+const PASSWORD_FILE_ENV_VAR: &str = "PROTON_PASS_PASSWORD_FILE";
+const TOTP_ENV_VAR: &str = "PROTON_PASS_TOTP";
+const TOTP_FILE_ENV_VAR: &str = "PROTON_PASS_TOTP_FILE";
 
 struct XdebugSessionLayer {
     session: String,
@@ -58,18 +64,51 @@ pub struct AuthenticatedClient {
     pub password: String,
 }
 
+fn get_value(
+    env_var: &str,
+    file_env_var: &str,
+    prompt: &str,
+    secure: bool,
+) -> anyhow::Result<String> {
+    match std::env::var(env_var) {
+        Ok(v) => Ok(v),
+        Err(_) => match std::env::var(file_env_var) {
+            Ok(v) => {
+                let mut f = std::fs::File::open(v).context("Error opening file")?;
+                let mut buff = String::new();
+                f.read_to_string(&mut buff).context("Error reading file")?;
+                Ok(buff.trim().to_string())
+            }
+            Err(_) => ask_for_input(prompt, secure),
+        },
+    }
+}
+
+fn get_password() -> anyhow::Result<String> {
+    get_value(
+        PASSWORD_ENV_VAR,
+        PASSWORD_FILE_ENV_VAR,
+        "Enter password: ",
+        true,
+    )
+}
+
+fn get_totp() -> anyhow::Result<String> {
+    get_value(TOTP_ENV_VAR, TOTP_FILE_ENV_VAR, "Enter TOTP: ", false)
+}
+
 pub async fn authenticate_client(
     client: Client,
     username: &str,
 ) -> anyhow::Result<AuthenticatedClient> {
     let auth = client.auth();
-    let password = ask_for_input("Enter password: ", true)?;
+    let password = get_password()?;
     let client = match auth.login(username, &password).await {
         LoginFlow::Ok(client, _) => client,
 
         LoginFlow::TwoFactor(client, _) => {
             if client.has_totp() {
-                let totp = ask_for_input("Enter TOTP: ", false)?;
+                let totp = get_totp()?;
                 client.totp(&totp).await?
             } else if client.has_fido() {
                 unimplemented!()
