@@ -23,8 +23,8 @@ pub enum ItemCommands {
     },
     #[command(about = "Create a new item")]
     Create {
-        #[arg(long, help = "ID of the vault to create the item in")]
-        vault: String,
+        #[command(subcommand)]
+        create_command: create::CreateCommands,
     },
     #[command(about = "Delete an item")]
     Delete {
@@ -72,7 +72,7 @@ pub async fn run(subcommand: ItemCommands, client: PassClient) -> Result<()> {
         ItemCommands::List { share_id, output } => {
             list::run(client, ShareId::new(share_id), output).await
         }
-        ItemCommands::Create { vault } => create::run(client, vault).await,
+        ItemCommands::Create { create_command } => create::run(create_command, client).await,
         ItemCommands::Delete { share_id, item_id } => {
             delete::run(client, ShareId::new(share_id), ItemId::new(item_id)).await
         }
