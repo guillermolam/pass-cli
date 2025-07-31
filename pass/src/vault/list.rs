@@ -60,7 +60,7 @@ impl PassClient {
                     }
                 }
             })
-            .buffer_unordered(MAX_CONCURRENCY)
+            .buffered(MAX_CONCURRENCY)
             .filter_map(|result| async { result })
             .collect()
             .await;
