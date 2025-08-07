@@ -118,10 +118,7 @@ async fn resolve_secrets_and_create_env(
     for env_var in env_vars {
         let uris = find_pass_uris(&env_var.value)?;
 
-        if uris.is_empty() {
-            // No secrets in this variable, use as-is
-            resolved_env.insert(env_var.name, env_var.value);
-        } else {
+        if !uris.is_empty() {
             // Resolve secrets in this variable
             let mut resolved_value = env_var.value.clone();
 
