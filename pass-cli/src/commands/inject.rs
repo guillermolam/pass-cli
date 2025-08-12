@@ -15,9 +15,9 @@ fn compile_pass_uri_regex() -> Result<Regex> {
 }
 
 fn set_file_permissions(file_path: &str, mode: u32) -> Result<()> {
-    #[cfg(unix)]
-    use std::os::unix::fs::PermissionsExt;
+    #[cfg(not(target_os = "windows"))]
     {
+        use std::os::unix::fs::PermissionsExt;
         let file = fs::File::open(file_path).with_context(|| {
             format!("Failed to open output file for permission setting: {file_path}")
         })?;
@@ -32,7 +32,7 @@ fn set_file_permissions(file_path: &str, mode: u32) -> Result<()> {
             .with_context(|| format!("Failed to set file permissions: {file_path}"))?;
     }
 
-    #[cfg(not(unix))]
+    #[cfg(target_os = "windows")]
     {
         // On non-Unix systems (like Windows), we can't set Unix-style permissions
         // The file will use default permissions for the platform

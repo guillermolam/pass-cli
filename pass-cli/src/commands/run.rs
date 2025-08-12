@@ -10,8 +10,6 @@ use std::thread::JoinHandle;
 
 use super::secret_resolver::{PassClientResolver, SecretCache, SecretReference, find_pass_uris};
 
-const SIGKILL_GRACE_TIME_MS: u64 = 2_000;
-
 #[derive(Debug)]
 struct EnvVar {
     name: String,
@@ -185,10 +183,12 @@ fn mask_line(line: &str, masking_regex: &Option<Regex>) -> String {
     }
 }
 
-#[cfg(unix)]
+#[cfg(not(target_os = "windows"))]
 async fn kill_process_by_pid(pid: i32) {
     // On Unix systems, send SIGTERM first, then SIGKILL if needed
     unsafe {
+        const SIGKILL_GRACE_TIME_MS: u64 = 2_000;
+
         libc::kill(pid, libc::SIGTERM);
 
         // Give the process a moment to terminate gracefully
@@ -202,7 +202,7 @@ async fn kill_process_by_pid(pid: i32) {
     }
 }
 
-#[cfg(not(unix))]
+#[cfg(target_os = "windows")]
 async fn kill_process_by_pid(pid: i32) {
     // On non-Unix systems (Windows), we'll use taskkill command as a simple approach
     let _ = std::process::Command::new("taskkill")

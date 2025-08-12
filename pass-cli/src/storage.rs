@@ -1,7 +1,20 @@
 use anyhow::Context;
-use std::fs::Permissions;
-use std::os::unix::fs::PermissionsExt;
+use std::fs::File;
 use std::path::Path;
+
+fn create_key_file(path: &Path) -> anyhow::Result<File> {
+    let f = File::create(path).context("Error creating local key file")?;
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        use std::fs::Permissions;
+        use std::os::unix::fs::PermissionsExt;
+        f.set_permissions(Permissions::from_mode(0o600))
+            .context("Error setting permissions")?;
+    }
+
+    Ok(f)
+}
 
 pub async fn get_local_key(base_dir: &Path) -> anyhow::Result<Vec<u8>> {
     let session_path_absolute =
@@ -16,9 +29,7 @@ pub async fn get_local_key(base_dir: &Path) -> anyhow::Result<Vec<u8>> {
 
     info!("Couldn't find local key file, generating one");
 
-    let f = std::fs::File::create(&key_path).context("Error creating local key file")?;
-    f.set_permissions(Permissions::from_mode(0o600))
-        .context("Error setting permissions")?;
+    create_key_file(&key_path).context("Error creating local key file")?;
 
     let key = pass_domain::crypto::generate_encryption_key();
     tokio::fs::write(key_path, &key)
