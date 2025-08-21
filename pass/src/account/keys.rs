@@ -1,7 +1,8 @@
+use crate::PassClient;
 use crate::common::CodeResponse;
-use crate::{PassClient, PublicKey};
 use anyhow::{Context, Result};
 use muon::GET;
+use pass_domain::PublicKey;
 
 const UNPROCESSABLE_ENTITY_CODE: u16 = 422;
 const ADDRESS_NOT_EXISTS_CODE: u32 = 33102;
@@ -61,7 +62,7 @@ impl PassClient {
                     .unarmor(response.public_key)
                     .await
                     .context("Error unarmoring public key")?;
-                result.push(PublicKey { content: unarmored });
+                result.push(PublicKey::new(unarmored));
             }
 
             Ok(result)

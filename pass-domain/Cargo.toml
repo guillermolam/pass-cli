@@ -8,8 +8,10 @@ doctest = false
 
 [dependencies]
 anyhow.workspace = true
+async-trait.workspace = true
 protobuf.workspace = true
 serde.workspace = true
+zeroize.workspace = true
 
 aes-gcm = "0.10.3"
 rand = "0.9.1"

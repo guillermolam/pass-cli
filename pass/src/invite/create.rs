@@ -1,9 +1,9 @@
+use crate::PassClient;
 use crate::crypto::encrypt_invite_keys::{EncryptInviteKeysFlow, InviteKeyToPrepare};
 use crate::item::item_keys::OpenedItemKeys;
 use crate::share::ShareKeys;
-use crate::{PassClient, PublicKey};
 use anyhow::{Context, Result};
-use pass_domain::{Address, ItemId, Share, ShareId, ShareRole, ShareType, TargetType};
+use pass_domain::{Address, ItemId, PublicKey, Share, ShareId, ShareRole, ShareType, TargetType};
 
 pub(crate) enum InviteRequest {
     ExistingUser(CreateInvitesRequest),

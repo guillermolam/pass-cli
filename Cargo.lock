@@ -267,9 +267,9 @@ checksum = "8b75356056920673b02621b35afd0f7dda9306d03c79a30f5c56c44cf256e3de"
 
 [[package]]
 name = "async-trait"
-version = "0.1.88"
+version = "0.1.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e539d3fca749fcee5236ab05e93a52867dd549cc157c8cb7f99595f3cedffdb5"
+checksum = "9035ad2d096bed7955a320ee7e2230574d28fd3c3a0f186cbea1ff3c7eed5dbb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2858,6 +2858,8 @@ dependencies = [
  "futures",
  "muon",
  "pass-domain",
+ "pass-fs",
+ "pass-pgp",
  "proton-pass-common",
  "serde",
  "serde_json",
@@ -2880,6 +2882,8 @@ dependencies = [
  "muon",
  "pass",
  "pass-domain",
+ "pass-fs",
+ "pass-pgp",
  "proton-crypto",
  "proton-crypto-account",
  "regex",
@@ -2898,12 +2902,36 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
+ "async-trait",
  "protobuf",
  "protobuf-codegen",
  "protoc-bin-vendored",
  "rand 0.9.2",
  "serde",
  "uuid",
+ "zeroize",
+]
+
+[[package]]
+name = "pass-fs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "pass-domain",
+ "tokio",
+]
+
+[[package]]
+name = "pass-pgp"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "pass-domain",
+ "proton-crypto",
+ "proton-crypto-account",
+ "tracing",
 ]
 
 [[package]]

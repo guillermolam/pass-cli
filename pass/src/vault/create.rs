@@ -1,9 +1,9 @@
+use crate::PassClient;
 use crate::utils::debug_response;
-use crate::{PassClient, PlainText};
 use anyhow::{Context, Result, anyhow};
 use muon::POST;
 use pass_domain::crypto::EncryptionTag;
-use pass_domain::{ShareId, VaultData, VaultDisplayPreferences, VaultId, crypto};
+use pass_domain::{PlainText, ShareId, VaultData, VaultDisplayPreferences, VaultId, crypto};
 
 pub struct CreateVaultArgs {
     name: String,
@@ -108,7 +108,7 @@ impl PassClient {
         let pgp_crypto = self.client_features.get_pgp_crypto().await;
 
         let encrypted_vault_key = pgp_crypto
-            .encrypt_and_sign(PlainText(vault_key), public, private, None)
+            .encrypt_and_sign(PlainText::new(vault_key), public, private, None)
             .await
             .context("Error encrypting and signing vault key")?;
 

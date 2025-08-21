@@ -1,5 +1,5 @@
-use super::client_features::TestClientFeatures;
 use crate::PassClient;
+use crate::test_tools::client_features::TestClientFeatures;
 use muon::test::server::{Request, Response, Server};
 use std::sync::Arc;
 
@@ -28,7 +28,8 @@ impl MuonServerExt for Arc<Server> {
     }
 
     fn pass_client(&self) -> PassClient {
-        PassClient::new(self.client(), Arc::new(TestClientFeatures::new()))
+        let key = pass_domain::crypto::generate_encryption_key();
+        PassClient::new(self.client(), Arc::new(TestClientFeatures::new(key)))
     }
 }
 

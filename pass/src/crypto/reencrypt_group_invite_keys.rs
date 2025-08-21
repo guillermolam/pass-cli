@@ -1,6 +1,6 @@
 use crate::crypto::constants::SIGNATURE_CONTEXT_EXISTING_USER;
-use crate::{PgpCrypto, PlainText, PublicKey, UnlockedAddressKeys};
 use anyhow::{Context, Result, anyhow};
+use pass_domain::{PgpCrypto, PlainText, PublicKey, UnlockedAddressKeys};
 use std::sync::Arc;
 use zeroize::ZeroizeOnDrop;
 
@@ -39,9 +39,9 @@ impl ReencryptGroupInviteKeysFlow {
         self,
         invite_keys: Vec<GroupInviteKeyToReencrypt>,
     ) -> Result<Vec<ReencryptedGroupInviteKey>> {
-        let mut group_address_public_keys = Vec::with_capacity(self.address_keys.keys.len());
-        let mut group_address_private_keys = Vec::with_capacity(self.address_keys.keys.len());
-        for key in self.address_keys.keys.into_values() {
+        let mut group_address_public_keys = Vec::with_capacity(self.address_keys.keys().len());
+        let mut group_address_private_keys = Vec::with_capacity(self.address_keys.keys().len());
+        for key in self.address_keys.value().into_values() {
             let public_key = self
                 .crypto
                 .get_public_key(key.private_key.clone())
@@ -77,7 +77,7 @@ impl ReencryptGroupInviteKeysFlow {
 
             let encrypted = self
                 .crypto
-                .encrypt_and_sign(PlainText(decrypted), public_key, private_key, None)
+                .encrypt_and_sign(PlainText::new(decrypted), public_key, private_key, None)
                 .await
                 .context("Error encrypting group invite key")?;
 

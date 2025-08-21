@@ -1,44 +1,17 @@
-use crate::{ApiKey, PassClient, PrivateKey, PublicKey};
+use crate::PassClient;
 use anyhow::{Context, Result, anyhow};
 use muon::GET;
 use muon::rest::core;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use pass_domain::{LockedUserKey, UserKey};
 
-#[derive(Clone, serde::Deserialize, serde::Serialize, Zeroize, ZeroizeOnDrop)]
-pub struct UserKey {
-    pub public_key: Vec<u8>,
-    pub private_key: Vec<u8>,
-}
-
-impl UserKey {
-    pub fn into_keys(self) -> (PrivateKey, PublicKey) {
-        (
-            PrivateKey {
-                content: self.private_key.clone(),
-            },
-            PublicKey {
-                content: self.public_key.clone(),
-            },
-        )
-    }
-}
-
-pub trait UserKeyExt {
-    fn split_keys(self) -> (Vec<PrivateKey>, Vec<PublicKey>);
-}
-
-impl UserKeyExt for Vec<UserKey> {
-    fn split_keys(self) -> (Vec<PrivateKey>, Vec<PublicKey>) {
-        let mut private = Vec::with_capacity(self.len());
-        let mut public = Vec::with_capacity(self.len());
-
-        for key in self {
-            let (pr, pu) = key.into_keys();
-            private.push(pr);
-            public.push(pu);
-        }
-
-        (private, public)
+fn api_user_key_to_locked_user_key(value: core::v4::keys::Key) -> LockedUserKey {
+    LockedUserKey {
+        id: value.id,
+        private_key: value.private_key,
+        token: value.token,
+        signature: value.signature,
+        primary: value.primary.into(),
+        active: value.active.into(),
     }
 }
 
@@ -63,8 +36,10 @@ impl PassClient {
                     .fetch_user_keys()
                     .await
                     .context("Error fetching user keys")?;
-                client
-                    .client_features
+
+                let account_crypto = client.client_features.get_account_crypto().await;
+
+                account_crypto
                     .open_user_keys(user_keys, passphrases.into_map())
                     .await
                     .context("Error opening user keys")
@@ -84,14 +59,20 @@ impl PassClient {
         }
     }
 
-    async fn fetch_user_keys(&self) -> Result<Vec<ApiKey>> {
+    async fn fetch_user_keys(&self) -> Result<Vec<LockedUserKey>> {
         debug!("Fetching user keys");
         let res = self.client.send(GET!("/core/v4/users")).await?;
         if !res.status().is_success() {
             return Err(anyhow!("HTTP Status: {:?}", res.status()));
         }
         let res: core::v4::users::GetRes = res.ok()?.into_body_json()?;
-        let user = res.user;
-        Ok(user.keys)
+
+        let mapped = res
+            .user
+            .keys
+            .into_iter()
+            .map(api_user_key_to_locked_user_key)
+            .collect();
+        Ok(mapped)
     }
 }

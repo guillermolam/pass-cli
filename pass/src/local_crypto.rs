@@ -1,5 +1,5 @@
 use crate::PassClient;
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use pass_domain::crypto::EncryptionTag;
 
 impl PassClient {
@@ -20,6 +20,16 @@ impl PassClient {
     }
 
     async fn get_local_key(&self) -> Result<Vec<u8>> {
-        self.client_features.get_local_key().await
+        let provider = self
+            .client_features
+            .get_local_key_provider()
+            .await
+            .context("Error getting local key provider")?;
+        let local_key = provider
+            .get_key()
+            .await
+            .context("Error getting local key")?;
+
+        Ok(local_key)
     }
 }

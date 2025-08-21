@@ -1,7 +1,7 @@
-use crate::ClientFeatures;
 use crate::cache::Cache;
 use anyhow::{Context, Result};
 use muon::Client;
+use pass_domain::ClientFeatures;
 use std::sync::Arc;
 
 #[derive(Clone)]

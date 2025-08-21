@@ -1,7 +1,6 @@
 use crate::PassClient;
-use crate::account::UnlockedAddressKeys;
 use anyhow::{Context, Result};
-use pass_domain::AddressKey;
+use pass_domain::{AddressKey, UnlockedAddressKeys};
 
 impl PassClient {
     pub async fn open_address_keys(
@@ -13,7 +12,8 @@ impl PassClient {
             .await
             .context("Error getting user keys")?;
 
-        self.client_features
+        let account_crypto = self.client_features.get_account_crypto().await;
+        account_crypto
             .open_address_keys(user_keys, address_keys)
             .await
             .context("Error opening address keys")

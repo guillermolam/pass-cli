@@ -1,5 +1,5 @@
 use anyhow::{Context, anyhow};
-use pass::{DataToDecrypt, Passphrase, PlainText, PrivateKey, PublicKey, Signature};
+use pass_domain::{DataToDecrypt, Passphrase, PlainText, PrivateKey, PublicKey, Signature};
 use proton_crypto::crypto::{
     ArmorerSync, DataEncoding, Decryptor, DecryptorSync, DetachedSignatureVariant, Encryptor,
     EncryptorSync, PGPProvider, PGPProviderSync, Signer, SignerSync, UnixTimestamp, VerifiedData,
@@ -8,12 +8,12 @@ use proton_crypto::crypto::{
 pub struct NativePgpCrypto;
 
 #[async_trait::async_trait]
-impl pass::PgpCrypto for NativePgpCrypto {
+impl pass_domain::PgpCrypto for NativePgpCrypto {
     async fn encrypt(&self, data: Vec<u8>, key: PublicKey) -> anyhow::Result<Vec<u8>> {
         let provider = proton_crypto::new_pgp_provider();
 
         let public_key = provider
-            .public_key_import(&key.content, DataEncoding::Bytes)
+            .public_key_import(key.as_ref(), DataEncoding::Bytes)
             .context("Error importing public key")?;
         let res = provider
             .new_encryptor()
@@ -36,10 +36,10 @@ impl pass::PgpCrypto for NativePgpCrypto {
         let provider = proton_crypto::new_pgp_provider();
 
         let public_key = provider
-            .public_key_import(&encryption_key.content, DataEncoding::Bytes)
+            .public_key_import(encryption_key.as_ref(), DataEncoding::Bytes)
             .context("Error importing public key")?;
         let private_key = provider
-            .private_key_import_unlocked(&signing_key.content, DataEncoding::Bytes)
+            .private_key_import_unlocked(signing_key.as_ref(), DataEncoding::Bytes)
             .context("Could not import key")?;
         let encryptor = provider
             .new_encryptor()
@@ -66,7 +66,7 @@ impl pass::PgpCrypto for NativePgpCrypto {
     async fn sign(&self, data: Vec<u8>, signing_key: PrivateKey) -> anyhow::Result<Vec<u8>> {
         let provider = proton_crypto::new_pgp_provider();
         let private_key = provider
-            .private_key_import_unlocked(&signing_key.content, DataEncoding::Bytes)
+            .private_key_import_unlocked(signing_key.as_ref(), DataEncoding::Bytes)
             .context("Could not import key")?;
         let res = provider
             .new_signer()
@@ -84,7 +84,7 @@ impl pass::PgpCrypto for NativePgpCrypto {
 
         for key in keys {
             let private_key = provider
-                .private_key_import_unlocked(&key.content, DataEncoding::Bytes)
+                .private_key_import_unlocked(key.as_ref(), DataEncoding::Bytes)
                 .context("Error importing private key")?;
             private_keys.push(private_key);
         }
@@ -113,7 +113,7 @@ impl pass::PgpCrypto for NativePgpCrypto {
 
         for key in decryption_keys {
             let private_key = provider
-                .private_key_import_unlocked(&key.content, DataEncoding::Bytes)
+                .private_key_import_unlocked(key.as_ref(), DataEncoding::Bytes)
                 .context("Error importing private key")?;
             private_keys.push(private_key);
         }
@@ -121,7 +121,7 @@ impl pass::PgpCrypto for NativePgpCrypto {
         let mut public_keys = vec![];
         for key in verification_keys {
             let as_public_key = provider
-                .public_key_import(&key.content, DataEncoding::Bytes)
+                .public_key_import(key.as_ref(), DataEncoding::Bytes)
                 .context("Could not import key")?;
             public_keys.push(as_public_key);
         }
@@ -167,7 +167,7 @@ impl pass::PgpCrypto for NativePgpCrypto {
 
         for key in decryption_keys {
             let private_key = provider
-                .private_key_import_unlocked(&key.content, DataEncoding::Bytes)
+                .private_key_import_unlocked(key.as_ref(), DataEncoding::Bytes)
                 .context("Error importing private key")?;
             private_keys.push(private_key);
         }
@@ -176,7 +176,7 @@ impl pass::PgpCrypto for NativePgpCrypto {
         for key in verification_keys {
             public_keys.push(
                 provider
-                    .public_key_import(&key.content, DataEncoding::Bytes)
+                    .public_key_import(key.as_ref(), DataEncoding::Bytes)
                     .context("Could not import key")?,
             );
         }
@@ -242,9 +242,7 @@ impl pass::PgpCrypto for NativePgpCrypto {
             .context("Could not import private key")?;
 
         let exported = provider.private_key_export_unlocked(&imported, DataEncoding::Bytes)?;
-        Ok(PrivateKey {
-            content: exported.as_ref().to_vec(),
-        })
+        Ok(PrivateKey::new(exported.as_ref().to_vec()))
     }
 
     async fn get_public_key(&self, key: PrivateKey) -> anyhow::Result<PublicKey> {
@@ -260,8 +258,6 @@ impl pass::PgpCrypto for NativePgpCrypto {
             .public_key_export(&public, DataEncoding::Bytes)
             .context("Could not export public key")?;
 
-        Ok(PublicKey {
-            content: exported.as_ref().to_vec(),
-        })
+        Ok(PublicKey::new(exported.as_ref().to_vec()))
     }
 }
