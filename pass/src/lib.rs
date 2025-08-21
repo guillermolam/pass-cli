@@ -25,6 +25,9 @@ mod user_keys;
 mod utils;
 mod vault;
 
+#[cfg(test)]
+mod test_tools;
+
 pub use account::{Passphrase, UnlockedAddressKey, UnlockedAddressKeys};
 pub use client::PassClient;
 pub use client_features::ClientFeatures;
