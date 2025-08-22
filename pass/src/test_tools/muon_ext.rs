@@ -1,4 +1,5 @@
 use crate::PassClient;
+use crate::test_tools::TEST_PASSPHRASE;
 use crate::test_tools::client_features::TestClientFeatures;
 use muon::test::server::{Request, Response, Server};
 use std::sync::Arc;
@@ -9,7 +10,8 @@ pub trait MuonServerExt {
         P: AsRef<str> + Send + Sync + 'static,
         F: Fn(&Request) -> Option<Response> + Send + Sync + 'static;
 
-    fn pass_client(&self) -> PassClient;
+    async fn pass_client(&self) -> PassClient;
+    fn pass_client_no_setup(&self) -> PassClient;
 }
 
 impl MuonServerExt for Arc<Server> {
@@ -27,19 +29,21 @@ impl MuonServerExt for Arc<Server> {
         });
     }
 
-    fn pass_client(&self) -> PassClient {
+    async fn pass_client(&self) -> PassClient {
+        super::setup_user_data::setup(self);
+        let client = self.pass_client_no_setup();
+
+        client
+            .setup_key_passphrases(TEST_PASSPHRASE)
+            .await
+            .expect("Error setting up passphrases");
+        client
+    }
+
+    fn pass_client_no_setup(&self) -> PassClient {
         let key = pass_domain::crypto::generate_encryption_key();
         PassClient::new(self.client(), Arc::new(TestClientFeatures::new(key)))
     }
-}
-
-pub fn new_res<B: Default>(status: u16) -> Option<Response<B>> {
-    Some(
-        Response::builder()
-            .status(status)
-            .body(B::default())
-            .unwrap(),
-    )
 }
 
 pub fn success<R: serde::Serialize>(res: R) -> Option<Response> {
@@ -50,4 +54,18 @@ pub fn success<R: serde::Serialize>(res: R) -> Option<Response> {
             .body(axum_core::body::Body::from(body))
             .unwrap(),
     )
+}
+
+#[macro_export]
+macro_rules! last_request {
+    ($recorder:expr) => {{
+        let requests = $recorder.read();
+        let req = requests
+            .into_iter()
+            .last()
+            .expect("Failed to get last request");
+
+        let bytes = req.body().to_vec();
+        serde_json::from_slice(&bytes).expect("Failed to parse request")
+    }};
 }

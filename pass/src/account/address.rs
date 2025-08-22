@@ -86,7 +86,7 @@ mod tests {
             success(addresses::GetRes { addresses: vec![] })
         });
 
-        let client = s.pass_client();
+        let client = s.pass_client_no_setup();
         let addresses = client
             .get_addresses()
             .await
@@ -118,7 +118,7 @@ mod tests {
             })
         });
 
-        let client = s.pass_client();
+        let client = s.pass_client_no_setup();
         let addresses = client
             .get_addresses()
             .await
@@ -145,7 +145,7 @@ mod tests {
             })
         });
 
-        let client = s.pass_client();
+        let client = s.pass_client_no_setup();
 
         let recorder = s.new_recorder();
 

@@ -6,13 +6,13 @@ use std::path::Path;
 
 const PASSPHRASES_FILE_NAME: &str = "passphrases.enc";
 
-#[derive(Debug, serde::Deserialize)]
-struct GetKeySaltsResponse {
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub(crate) struct GetKeySaltsResponse {
     #[serde(default, rename = "KeySalts")]
     pub key_salts: Vec<KeySaltResponse>,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct KeySaltResponse {
     #[serde(rename = "ID")]
     pub id: String,

@@ -4,6 +4,10 @@ extern crate tracing;
 #[macro_use]
 mod macros;
 
+#[cfg(test)]
+#[macro_use]
+mod test_tools;
+
 mod account;
 mod cache;
 mod client;
@@ -23,9 +27,6 @@ mod user;
 mod user_keys;
 mod utils;
 mod vault;
-
-#[cfg(test)]
-mod test_tools;
 
 pub use client::PassClient;
 pub use item::create::login;

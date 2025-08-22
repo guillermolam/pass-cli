@@ -140,7 +140,7 @@ impl pass_domain::PgpCrypto for NativePgpCrypto {
         };
 
         let res = decryptor
-            .decrypt(data, DataEncoding::Auto)
+            .decrypt(data, DataEncoding::Bytes)
             .context("Could not decrypt data")?;
 
         match res.verification_result() {

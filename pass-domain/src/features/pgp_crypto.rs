@@ -1,6 +1,12 @@
 use crate::{DataToDecrypt, Passphrase, PlainText, PrivateKey, PublicKey};
 use anyhow::Result;
 
+#[derive(Clone, Debug)]
+pub enum DataEncoding {
+    Armored,
+    Binary,
+}
+
 #[async_trait::async_trait]
 pub trait PgpCrypto {
     async fn encrypt(&self, data: Vec<u8>, key: PublicKey) -> Result<Vec<u8>>;
