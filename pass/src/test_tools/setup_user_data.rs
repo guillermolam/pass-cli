@@ -160,5 +160,5 @@ pub fn setup(server: &Arc<Server>) {
                 key_salt: Some(TEST_SALT_VALUE.to_string()),
             }],
         })
-    })
+    });
 }

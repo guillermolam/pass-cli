@@ -1,11 +1,17 @@
 use crate::PassClient;
 use crate::test_tools::TEST_PASSPHRASE;
 use crate::test_tools::client_features::TestClientFeatures;
+pub use muon::Method;
 use muon::test::server::{Request, Response, Server};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub trait MuonServerExt {
-    fn handler<P, F>(&self, path: P, handler: F)
+    fn handler<P, F>(&self, path: P, handler: F) -> Arc<AtomicBool>
+    where
+        P: AsRef<str> + Send + Sync + 'static,
+        F: Fn(&Request) -> Option<Response> + Send + Sync + 'static;
+    fn handler_with_method<P, F>(&self, method: Method, path: P, handler: F) -> Arc<AtomicBool>
     where
         P: AsRef<str> + Send + Sync + 'static,
         F: Fn(&Request) -> Option<Response> + Send + Sync + 'static;
@@ -15,18 +21,51 @@ pub trait MuonServerExt {
 }
 
 impl MuonServerExt for Arc<Server> {
-    fn handler<P, F>(&self, path: P, handler: F)
+    fn handler<P, F>(&self, path: P, handler: F) -> Arc<AtomicBool>
     where
         P: AsRef<str> + Send + Sync + 'static,
         F: Fn(&Request) -> Option<Response> + Send + Sync + 'static,
     {
+        let hit = Arc::new(AtomicBool::new(false));
+        let hit_clone = hit.clone();
         self.add_handler(move |req| {
-            if req.uri().path() == path.as_ref() {
-                handler(req)
+            if req.uri().path().eq(path.as_ref()) {
+                let res = handler(req);
+                if res.is_some() {
+                    hit_clone.store(true, Ordering::Relaxed);
+                }
+
+                res
             } else {
                 None
             }
         });
+
+        hit
+    }
+    fn handler_with_method<P, F>(&self, method: Method, path: P, handler: F) -> Arc<AtomicBool>
+    where
+        P: AsRef<str> + Send + Sync + 'static,
+        F: Fn(&Request) -> Option<Response> + Send + Sync + 'static,
+    {
+        let hit = Arc::new(AtomicBool::new(false));
+        let hit_clone = hit.clone();
+        self.add_handler(move |req| {
+            let req_method_name = req.method().as_str().to_lowercase();
+            let expected_method_name = method.to_string().to_lowercase();
+            if req.uri().path().eq(path.as_ref()) && req_method_name == expected_method_name {
+                let res = handler(req);
+                if res.is_some() {
+                    hit_clone.store(true, Ordering::Relaxed);
+                }
+
+                res
+            } else {
+                None
+            }
+        });
+
+        hit
     }
 
     async fn pass_client(&self) -> PassClient {
@@ -45,6 +84,9 @@ impl MuonServerExt for Arc<Server> {
         PassClient::new(self.client(), Arc::new(TestClientFeatures::new(key)))
     }
 }
+
+#[derive(serde::Serialize)]
+pub struct Empty;
 
 pub fn success<R: serde::Serialize>(res: R) -> Option<Response> {
     let body = serde_json::to_vec(&res).unwrap();
@@ -67,5 +109,14 @@ macro_rules! last_request {
 
         let bytes = req.body().to_vec();
         serde_json::from_slice(&bytes).expect("Failed to parse request")
+    }};
+}
+
+#[macro_export]
+macro_rules! assert_hit {
+    ($handled:expr) => {{
+        if !$handled.load(std::sync::atomic::Ordering::SeqCst) {
+            panic!("Endpoint has not been hit");
+        }
     }};
 }

@@ -137,7 +137,7 @@ mod tests {
 
         let client = server.pass_client().await;
 
-        server.handler("/pass/v1/vault", |_| {
+        let handled = server.handler("/pass/v1/vault", |_| {
             success(CreateVaultResponse {
                 share: CreateVaultResponseContent {
                     share_id: SHARE_ID.to_string(),
@@ -154,6 +154,8 @@ mod tests {
 
         assert_eq!(SHARE_ID, share_id.value());
         assert_eq!(VAULT_ID, vault_id.value());
+
+        assert_hit!(handled);
 
         let req: CreateVaultRequest = last_request!(recorder);
         // Check vault key is encrypted with user key
