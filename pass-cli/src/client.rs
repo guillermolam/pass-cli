@@ -19,6 +19,7 @@ const PASSWORD_ENV_VAR: &str = "PROTON_PASS_PASSWORD";
 const PASSWORD_FILE_ENV_VAR: &str = "PROTON_PASS_PASSWORD_FILE";
 const TOTP_ENV_VAR: &str = "PROTON_PASS_TOTP";
 const TOTP_FILE_ENV_VAR: &str = "PROTON_PASS_TOTP_FILE";
+const APP_HEADER_ENV_VAR: &str = "PROTON_PASS_APP_HEADER";
 
 struct XdebugSessionLayer {
     session: String,
@@ -126,8 +127,12 @@ pub async fn authenticate_client(
     Ok(AuthenticatedClient { client, password })
 }
 
+fn get_app_header() -> String {
+    std::env::var(APP_HEADER_ENV_VAR).unwrap_or_else(|_| APP_HEADER.to_string())
+}
+
 pub async fn get_client() -> anyhow::Result<Client> {
-    let app = App::new(APP_HEADER)?;
+    let app = App::new(get_app_header())?;
 
     let base_dir = crate::utils::get_base_dir().context("failed to get base dir")?;
     let store = AuthenticatorStore::get_from_local(base_dir.clone())
