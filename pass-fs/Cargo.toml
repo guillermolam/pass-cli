@@ -3,6 +3,9 @@ name = "pass-fs"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+doctest = false
+
 [dependencies]
 pass-domain = { path = "../pass-domain" }
 tokio.workspace = true

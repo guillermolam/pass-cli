@@ -112,7 +112,7 @@ pub async fn authenticate_client(
             if client.has_totp() {
                 let totp = get_totp()?;
                 client.totp(&totp).await?
-            } else if client.has_fido() {
+            } else if client.fido_details().is_some() {
                 bail!("FIDO authentication is not supported yet");
             } else {
                 bail!("no 2FA available");
