@@ -16,19 +16,19 @@ pub struct ItemDetails {
     pub attachments: Vec<ItemAttachment>,
 }
 
-#[derive(Debug, serde::Deserialize)]
-struct GetItemResponse {
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub(crate) struct GetItemResponse {
     #[serde(rename = "Item")]
     pub item: ItemRevision,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 struct GetAttachmentsResponse {
     #[serde(rename = "Files")]
     pub files: AttachmentsResponse,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 struct AttachmentsResponse {
     #[serde(rename = "Files")]
     pub files: Vec<AttachmentResponse>,
@@ -36,7 +36,7 @@ struct AttachmentsResponse {
     pub last_id: Option<String>,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 struct AttachmentResponse {
     #[serde(rename = "FileID")]
     pub file_id: String,
@@ -52,7 +52,7 @@ struct AttachmentResponse {
     pub encryption_version: u8,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 struct ChunkResponse {
     #[serde(rename = "ChunkID")]
     pub chunk_id: String,
@@ -249,5 +249,146 @@ impl PassClient {
         let response: GetItemResponse = res.body_json().context("Error parsing item response")?;
 
         Ok(response.item)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_tools::*;
+    use crate::utils::b64_encode;
+    use std::sync::Arc;
+
+    use muon::test::server::{HTTP, Server};
+    use pass_domain::{
+        CustomItem, CustomSection, ItemContent, ItemData, ItemExtraField, ItemExtraFieldContent,
+        ItemFlag,
+    };
+
+    #[muon::test(scheme(HTTP))]
+    async fn test_fetch_item_revision(server: Arc<Server>) {
+        const SHARE_ID: &str = "MyShareID";
+        const ITEM_ID: &str = "MyItemID";
+
+        let client = server.pass_client().await;
+
+        let content = random_string(10);
+        let revision = ItemRevisionBuilder::new(ITEM_ID.to_string())
+            .with_content(content.clone())
+            .build();
+        let handled = setup_item_revision(&server, SHARE_ID, ITEM_ID, revision.clone());
+
+        let recorder = server.new_recorder();
+        let revision = client
+            .fetch_item_revision(&share_id!(SHARE_ID), &item_id!(ITEM_ID))
+            .await
+            .expect("Should be able to get the item");
+
+        assert_hit!(handled);
+        let requests = recorder.read();
+        assert_eq!(1, requests.len());
+
+        assert_eq!(ITEM_ID, revision.item_id);
+        assert_eq!(content, revision.content);
+    }
+
+    #[muon::test(scheme(HTTP))]
+    async fn test_view_item(server: Arc<Server>) {
+        const SHARE_ID: &str = "MyShareID";
+        const ITEM_ID: &str = "MyItemID";
+        const ITEM_TITLE: &str = "My item";
+        const ITEM_NOTE: &str = "Item note";
+        const ITEM_UUID: &str = "1234567890";
+        const ITEM_SECTION_NAME: &str = "Section name";
+        const ITEM_SECTION_FIELD_TITLE: &str = "Section field title";
+        const ITEM_SECTION_FIELD_VALUE: &str = "Section field value";
+
+        let client = server.pass_client().await;
+        setup_vault_share(&server, SHARE_ID);
+        setup_share_keys(&server, SHARE_ID);
+
+        let data = ItemData::new(
+            ITEM_TITLE.to_string(),
+            ITEM_NOTE.to_string(),
+            ITEM_UUID.to_string(),
+            ItemContent::Custom(CustomItem {
+                sections: vec![CustomSection {
+                    section_name: ITEM_SECTION_NAME.to_string(),
+                    section_fields: vec![ItemExtraField {
+                        name: ITEM_SECTION_FIELD_TITLE.to_string(),
+                        content: ItemExtraFieldContent::Text(ITEM_SECTION_FIELD_VALUE.to_string()),
+                    }],
+                }],
+            }),
+            vec![],
+        )
+        .expect("Error creating item data");
+
+        let encrypted_data = encrypt_item_contents(data.clone());
+        let encoded_data = b64_encode(&encrypted_data.encrypted_contents);
+        let revision = ItemRevisionBuilder::new(ITEM_ID.to_string())
+            .with_content(encoded_data.clone())
+            .with_item_key(Some(b64_encode(encrypted_data.encrypted_item_key.clone())))
+            .build();
+        let handled = setup_item_revision(&server, SHARE_ID, ITEM_ID, revision.clone());
+
+        let recorder = server.new_recorder();
+        let details = client
+            .view_item(&share_id!(SHARE_ID), &item_id!(ITEM_ID))
+            .await
+            .expect("Should be able to view the item");
+
+        assert_hit!(handled);
+        let requests = recorder.read();
+
+        assert_eq!(4, requests.len());
+
+        assert_eq!(ITEM_ID, details.item.id.value());
+        assert_eq!(data, details.item.content);
+    }
+
+    #[muon::test(scheme(HTTP))]
+    async fn test_view_item_fetches_attachments(server: Arc<Server>) {
+        const SHARE_ID: &str = "MyShareID";
+        const ITEM_ID: &str = "MyItemID";
+
+        let client = server.pass_client().await;
+        setup_vault_share(&server, SHARE_ID);
+        setup_share_keys(&server, SHARE_ID);
+
+        let data = create_random_item();
+        let encrypted_data = encrypt_item_contents(data.clone());
+        let encoded_data = b64_encode(&encrypted_data.encrypted_contents);
+        let revision = ItemRevisionBuilder::new(ITEM_ID.to_string())
+            .with_content(encoded_data.clone())
+            .with_item_key(Some(b64_encode(encrypted_data.encrypted_item_key.clone())))
+            .with_flags(ItemFlag::ItemHasFiles as u64)
+            .build();
+        setup_item_revision(&server, SHARE_ID, ITEM_ID, revision.clone());
+
+        // TODO: Add test that has attachments to check they can be decrypted
+        let handled = server.handler_with_method(
+            Method::GET,
+            format!("/pass/v1/share/{SHARE_ID}/item/{ITEM_ID}/files"),
+            move |_| {
+                success(GetAttachmentsResponse {
+                    files: AttachmentsResponse {
+                        files: vec![],
+                        last_id: None,
+                    },
+                })
+            },
+        );
+
+        let recorder = server.new_recorder();
+        client
+            .view_item(&share_id!(SHARE_ID), &item_id!(ITEM_ID))
+            .await
+            .expect("Should be able to view the item");
+
+        assert_hit!(handled);
+
+        let requests = recorder.read();
+        assert_eq!(5, requests.len());
     }
 }

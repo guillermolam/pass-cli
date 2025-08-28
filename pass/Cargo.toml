@@ -11,16 +11,22 @@ doctest = false
 pass-domain = { path = "../pass-domain" }
 muon.workspace = true
 proton-pass-common.workspace = true
-tokio.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
+zeroize.workspace = true
 
 async-lock = "3.4.0"
 base64 = "0.22.1"
 bytes = "1.10.1"
 futures = "0.3"
-zeroize = { version = "1.8", features = ["derive"] }
+
+[dev-dependencies]
+pass-fs = {path = "../pass-fs"}
+pass-pgp = {path = "../pass-pgp"}
+
+axum-core = "0.4"
+rand.workspace = true

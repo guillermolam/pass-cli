@@ -4,10 +4,13 @@ extern crate tracing;
 #[macro_use]
 mod macros;
 
+#[cfg(test)]
+#[macro_use]
+mod test_tools;
+
 mod account;
 mod cache;
 mod client;
-mod client_features;
 mod common;
 mod constants;
 mod crypto;
@@ -25,17 +28,7 @@ mod user_keys;
 mod utils;
 mod vault;
 
-pub use account::{Passphrase, UnlockedAddressKey, UnlockedAddressKeys};
 pub use client::PassClient;
-pub use client_features::ClientFeatures;
-pub use crypto::{
-    DataToDecrypt, PgpCrypto, PgpCryptoError, PlainText, PrivateKey, PublicKey, Signature,
-};
 pub use item::create::login;
 pub use item::find::FindItemQuery;
-pub use muon::rest::core::v4::keys::Key as ApiKey;
-pub use muon::rest::core::v4::keys::salts::KeySalt as ApiKeySalt;
-pub use user_keys::{UserKey, UserKeyExt};
 pub use vault::{CreateVaultArgs, UpdateVaultArgs};
-
-pub use utils::b64_encode;

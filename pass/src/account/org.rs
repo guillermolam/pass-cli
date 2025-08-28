@@ -1,10 +1,10 @@
-use crate::user_keys::UserKeyExt;
-use crate::{
-    DataToDecrypt, PassClient, Passphrase, PrivateKey, PublicKey, Signature, UnlockedAddressKeys,
-};
+use crate::PassClient;
 use anyhow::{Context, Result, anyhow};
 use muon::GET;
-use pass_domain::AddressKey;
+use pass_domain::{
+    AddressKey, DataToDecrypt, Passphrase, PrivateKey, PublicKey, Signature, UnlockedAddressKeys,
+    UserKeyExt,
+};
 
 struct OrgKeyCacheType;
 
@@ -103,7 +103,8 @@ impl PassClient {
             .await
             .context("Error opening org key")?;
 
-        self.client_features
+        let account_crypto = self.client_features.get_account_crypto().await;
+        account_crypto
             .open_address_keys_with_keys(vec![private_org_key], vec![public_org_key], group_keys)
             .await
             .context("Error opening address keys")

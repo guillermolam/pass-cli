@@ -1,9 +1,9 @@
+use crate::PassClient;
 use crate::utils::debug_response;
-use crate::{PassClient, PlainText};
 use anyhow::{Context, Result, anyhow};
 use muon::POST;
 use pass_domain::crypto::EncryptionTag;
-use pass_domain::{ShareId, VaultData, VaultDisplayPreferences, VaultId, crypto};
+use pass_domain::{PlainText, ShareId, VaultData, VaultDisplayPreferences, VaultId, crypto};
 
 pub struct CreateVaultArgs {
     name: String,
@@ -18,7 +18,7 @@ impl CreateVaultArgs {
         Ok(CreateVaultArgs { name })
     }
 }
-#[derive(Clone, Debug, serde::Serialize)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 struct CreateVaultRequest {
     #[serde(rename = "AddressID")]
     pub address_id: String,
@@ -30,13 +30,13 @@ struct CreateVaultRequest {
     pub encrypted_vault_key: String,
 }
 
-#[derive(Clone, Debug, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 struct CreateVaultResponse {
     #[serde(rename = "Share")]
     pub share: CreateVaultResponseContent,
 }
 
-#[derive(Clone, Debug, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 struct CreateVaultResponseContent {
     #[serde(rename = "ShareID")]
     pub share_id: String,
@@ -108,7 +108,7 @@ impl PassClient {
         let pgp_crypto = self.client_features.get_pgp_crypto().await;
 
         let encrypted_vault_key = pgp_crypto
-            .encrypt_and_sign(PlainText(vault_key), public, private, None)
+            .encrypt_and_sign(PlainText::new(vault_key), public, private, None)
             .await
             .context("Error encrypting and signing vault key")?;
 
@@ -118,5 +118,69 @@ impl PassClient {
             content_format_version: crate::constants::VAULT_CONTENT_CONTENT_FORMAT_VERSION,
             encrypted_vault_key: crate::utils::b64_encode(encrypted_vault_key),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_tools::*;
+    use std::sync::Arc;
+
+    use muon::test::server::{HTTP, Server};
+
+    #[muon::test(scheme(HTTP))]
+    async fn test_create_vault(server: Arc<Server>) {
+        const VAULT_NAME: &str = "MyTestVault";
+        const SHARE_ID: &str = "MyShareID";
+        const VAULT_ID: &str = "MyVaultID";
+
+        let client = server.pass_client().await;
+
+        let handled = server.handler("/pass/v1/vault", |_| {
+            success(CreateVaultResponse {
+                share: CreateVaultResponseContent {
+                    share_id: SHARE_ID.to_string(),
+                    vault_id: VAULT_ID.to_string(),
+                },
+            })
+        });
+
+        let recorder = server.new_recorder();
+        let (share_id, vault_id) = client
+            .create_vault(CreateVaultArgs::new(VAULT_NAME.to_string()).unwrap())
+            .await
+            .expect("Should be able to create the vault request");
+
+        assert_eq!(SHARE_ID, share_id.value());
+        assert_eq!(VAULT_ID, vault_id.value());
+
+        assert_hit!(handled);
+
+        let req: CreateVaultRequest = last_request!(recorder);
+        // Check vault key is encrypted with user key
+        let user_key = client.get_primary_user_key().await.unwrap();
+        let (private, public) = user_key.into_keys();
+
+        let encrypted_vault_key = crate::utils::b64_decode(&req.encrypted_vault_key).unwrap();
+        let pgp_crypto = client.client_features.get_pgp_crypto().await;
+        let decrypted_vault_key = pgp_crypto
+            .decrypt_and_verify(encrypted_vault_key, vec![private], vec![public], None)
+            .await
+            .expect("Error decrypting and verifying vault key");
+        assert_eq!(32, decrypted_vault_key.len());
+
+        // Decrypt vault content
+        let encrypted_vault_content = crate::utils::b64_decode(&req.content).unwrap();
+        let decrypted_vault_content = crypto::decrypt(
+            &encrypted_vault_content,
+            &decrypted_vault_key,
+            EncryptionTag::VaultContent,
+        )
+        .expect("Error decrypting vault content");
+
+        let parsed = VaultData::deserialize(&decrypted_vault_content)
+            .expect("Failed to parse vault content");
+        assert_eq!(VAULT_NAME, parsed.name);
     }
 }

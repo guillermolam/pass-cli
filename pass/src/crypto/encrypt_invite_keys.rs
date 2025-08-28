@@ -1,6 +1,6 @@
 use crate::crypto::constants::SIGNATURE_CONTEXT_EXISTING_USER;
-use crate::{PgpCrypto, PlainText, PublicKey, UnlockedAddressKeys};
 use anyhow::{Context, Result};
+use pass_domain::{PgpCrypto, PlainText, PublicKey, UnlockedAddressKeys};
 use std::sync::Arc;
 use zeroize::ZeroizeOnDrop;
 
@@ -38,7 +38,7 @@ impl EncryptInviteKeysFlow {
         mut self,
         invite_keys: Vec<InviteKeyToPrepare>,
     ) -> Result<Vec<PreparedInviteKey>> {
-        let signing_key = match self.user_address_keys.keys.first_entry() {
+        let signing_key = match self.user_address_keys.value().first_entry() {
             Some(k) => k.get().clone(),
             None => return Err(anyhow::anyhow!("User address key not found")),
         };
@@ -54,7 +54,7 @@ impl EncryptInviteKeysFlow {
             let encrypted = self
                 .crypto
                 .encrypt_and_sign(
-                    PlainText(invite_key.decrypted_key),
+                    PlainText::new(invite_key.decrypted_key),
                     invited_key.clone(),
                     signing_key.private_key.clone(),
                     Some(SIGNATURE_CONTEXT_EXISTING_USER.to_string()),

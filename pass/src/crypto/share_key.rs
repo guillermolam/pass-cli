@@ -1,6 +1,6 @@
 use crate::share::ShareKey;
-use crate::{PgpCrypto, PrivateKey, PublicKey, UnlockedAddressKeys, UserKey};
 use anyhow::Result;
+use pass_domain::{PgpCrypto, PublicKey, UnlockedAddressKeys, UserKey};
 use std::sync::Arc;
 
 pub(crate) struct OpenShareKeyFlow {
@@ -18,12 +18,9 @@ impl OpenShareKeyFlow {
         let mut public_keys = vec![];
 
         for user_key in self.user_keys {
-            private_keys.push(PrivateKey {
-                content: user_key.private_key.clone(),
-            });
-            public_keys.push(PublicKey {
-                content: user_key.public_key.clone(),
-            });
+            let (private, public) = user_key.into_keys();
+            private_keys.push(private);
+            public_keys.push(public);
         }
 
         self.crypto

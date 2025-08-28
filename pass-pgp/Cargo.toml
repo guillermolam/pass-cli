@@ -1,0 +1,17 @@
+[package]
+name = "pass-pgp"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+doctest = false
+
+[dependencies]
+pass-domain = { path = "../pass-domain" }
+
+anyhow.workspace = true
+async-trait.workspace = true
+chrono.workspace = true
+proton-crypto.workspace = true
+proton-crypto-account.workspace = true
+tracing.workspace = true

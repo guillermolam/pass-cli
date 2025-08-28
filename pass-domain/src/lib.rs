@@ -2,8 +2,10 @@
 mod macros;
 
 pub mod crypto;
+mod features;
 mod models;
 mod protos;
+mod types;
 
 macro_rules! implement_custom_methods {
     ($t:ty) => {
@@ -31,6 +33,7 @@ macro_rules! implement_custom_methods {
     };
 }
 
+pub use features::*;
 pub use models::address::*;
 pub use models::group::*;
 pub use models::invite::*;
@@ -38,6 +41,7 @@ pub use models::item::*;
 pub use models::share::*;
 pub use models::vault::*;
 pub use protobuf;
+pub use types::*;
 
 implement_custom_methods!(protos::vault::vault_v1::Vault);
 implement_custom_methods!(protos::item::item_v1::Item);

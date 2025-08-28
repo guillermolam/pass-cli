@@ -23,7 +23,7 @@ pub struct Vault {
     pub content: VaultData,
 }
 
-#[derive(Clone, Debug, serde::Serialize)]
+#[derive(Clone, Debug, serde::Serialize, PartialEq, Eq)]
 pub struct VaultData {
     pub name: String,
     pub description: String,
@@ -84,7 +84,7 @@ impl From<vault_v1::Vault> for VaultData {
     }
 }
 
-#[derive(Clone, Debug, Default, serde::Serialize)]
+#[derive(Clone, Debug, Default, serde::Serialize, PartialEq, Eq)]
 pub struct VaultDisplayPreferences {
     pub icon: VaultIcon,
     pub color: VaultColor,
@@ -109,7 +109,7 @@ impl From<vault_v1::VaultDisplayPreferences> for VaultDisplayPreferences {
     }
 }
 
-#[derive(Clone, Debug, Default, serde::Serialize)]
+#[derive(Clone, Debug, Default, serde::Serialize, PartialEq, Eq)]
 pub enum VaultIcon {
     #[default]
     Icon1,
@@ -220,7 +220,7 @@ impl From<vault_v1::VaultIcon> for VaultIcon {
     }
 }
 
-#[derive(Clone, Debug, Default, serde::Serialize)]
+#[derive(Clone, Debug, Default, serde::Serialize, PartialEq, Eq)]
 pub enum VaultColor {
     #[default]
     Color1,

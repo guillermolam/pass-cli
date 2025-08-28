@@ -93,3 +93,154 @@ impl PassClient {
         Ok(DecryptedShareKey(share_key))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::account::keys::{
+        ActivePublicKeysResponse, AddressDataResponse, PublicAddressKeyResponse,
+    };
+    use crate::invite::group::keys::{GetGroupsResponse, GroupResponse};
+    use crate::share::EncryptedShareKey;
+    use crate::test_tools::*;
+    use muon::rest::core::v4::{addresses, keys};
+    use pass_domain::{DataToArmor, PlainText, PublicKey, ShareRole, ShareType, crypto};
+
+    #[muon::test(scheme(HTTP))]
+    async fn open_share_key_for_direct_share(server: Arc<Server>) {
+        const SHARE_ID: &str = "SHARE_ID";
+        const VAULT_ID: &str = "VAULT_ID";
+
+        let client = server.pass_client().await;
+
+        let share_key_content = crypto::generate_encryption_key();
+        let encrypted_share_key = client.encrypt_for_user_key(share_key_content.clone()).await;
+        let share_key = ShareKey::new(1, EncryptedShareKey(encrypted_share_key));
+        let share = Share {
+            id: share_id!(SHARE_ID),
+            address_id: address_id!(TEST_ADDRESS_ID),
+            share_type: ShareType::Vault {
+                vault_id: vault_id!(VAULT_ID),
+            },
+            vault_id: vault_id!(VAULT_ID),
+            permission: Default::default(),
+            content: None,
+            share_role: ShareRole::Owner,
+            group_id: None,
+        };
+        let opened_share_key = client
+            .open_share_key_for_share(&share, share_key)
+            .await
+            .expect("Should be able to open share key");
+
+        assert_eq!(share_key_content, opened_share_key.value());
+    }
+
+    #[muon::test(scheme(HTTP))]
+    async fn open_share_key_for_group_share(server: Arc<Server>) {
+        const SHARE_ID: &str = "SHARE_ID";
+        const VAULT_ID: &str = "VAULT_ID";
+        const GROUP_ID: &str = "GROUP_ID";
+        const GROUP_ADDRESS_ID: &str = "GROUP_ADDRESS_ID";
+        const GROUP_ADDRESS_EMAIL: &str = "group@address.test";
+        const GROUP_ADDRESS_KEY_ID: &str = "GROUP_ADDRESS_KEY_ID";
+
+        let client = server.pass_client().await;
+        let (group_private_key, group_armored_public_key) = {
+            let crypto = client.client_features.get_pgp_crypto().await;
+            let (private, public) = crypto
+                .generate_key_pair(
+                    GROUP_ADDRESS_ID.to_string(),
+                    GROUP_ADDRESS_EMAIL.to_string(),
+                )
+                .await
+                .expect("Failed to generate group address key");
+
+            let public_armored = crypto
+                .armor(DataToArmor::PublicKey(public.as_ref().to_vec()))
+                .await
+                .expect("Failed to armor");
+
+            (private, public_armored)
+        };
+
+        server.handler_with_method(Method::GET, "/core/v4/groups", move |_| {
+            success(GetGroupsResponse {
+                groups: vec![GroupResponse {
+                    id: GROUP_ID.to_string(),
+                    name: "Test group name".to_string(),
+                    address: Some(addresses::Address {
+                        id: GROUP_ADDRESS_ID.to_string(),
+                        email: GROUP_ADDRESS_EMAIL.to_string(),
+                        keys: vec![keys::Key {
+                            id: GROUP_ADDRESS_KEY_ID.to_string(),
+                            private_key: "".to_string(), // Ignored, as we don't use it here
+                            token: None,
+                            signature: None,
+                            primary: Default::default(),
+                            active: Default::default(),
+                        }],
+                    }),
+                    permissions: 0,
+                    create_time: 0,
+                    flags: 0,
+                    group_visibility: 0,
+                    member_visibility: 0,
+                    description: "".to_string(),
+                }],
+            })
+        });
+
+        let group_armored_public_key_clone = group_armored_public_key.clone();
+        server.handler_with_method(Method::GET, "/core/v4/keys/all", move |_| {
+            success(ActivePublicKeysResponse {
+                address: AddressDataResponse {
+                    keys: vec![PublicAddressKeyResponse {
+                        public_key: group_armored_public_key_clone.to_string(),
+                    }],
+                },
+            })
+        });
+
+        let share_key_raw = crypto::generate_encryption_key();
+
+        // Share keys via group are encrypted for the primary address key and signed with the group
+        // key.
+        let encrypted_share_key = {
+            let pgp = client.client_features.get_pgp_crypto().await;
+            let address_public_key = pgp
+                .unarmor(TEST_ADDRESS_KEY_PUBLIC_KEY.to_string())
+                .await
+                .expect("Failed to get unarmored address key");
+
+            pgp.encrypt_and_sign(
+                PlainText::new(share_key_raw.clone()),
+                PublicKey::new(address_public_key),
+                group_private_key.clone(),
+                None,
+            )
+            .await
+            .expect("Failed to encrypt share key")
+        };
+
+        let share_key = ShareKey::new(1, EncryptedShareKey(encrypted_share_key.clone()));
+        let share = Share {
+            id: share_id!(SHARE_ID),
+            address_id: address_id!(TEST_ADDRESS_ID),
+            share_type: ShareType::Vault {
+                vault_id: vault_id!(VAULT_ID),
+            },
+            vault_id: vault_id!(VAULT_ID),
+            permission: Default::default(),
+            content: None,
+            share_role: ShareRole::Owner,
+            group_id: Some(group_id!(GROUP_ID)),
+        };
+        let opened_share_key = client
+            .open_share_key_for_share(&share, share_key)
+            .await
+            .expect("Should be able to open share key");
+
+        assert_eq!(share_key_raw, opened_share_key.value());
+    }
+}

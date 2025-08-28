@@ -11,9 +11,9 @@ use std::io::Read;
 const ENVIRONMENT_ENV_VAR: &str = "ENVIRONMENT";
 const XDEBUG_SESSION_ENV_VAR: &str = "XDEBUG_SESSION";
 const XDEBUG_SESSION_HEADER: &str = "XDEBUG_SESSION";
-//const APP_HEADER: &str = "ios-mail@7.1.0";
+const APP_HEADER: &str = "ios-mail@7.1.0";
 //const APP_HEADER: &str = "Linux-pass@1.0.0";
-const APP_HEADER: &str = "web-pass@5.0.999.999";
+//const APP_HEADER: &str = "web-pass@5.0.999.999";
 
 const PASSWORD_ENV_VAR: &str = "PROTON_PASS_PASSWORD";
 const PASSWORD_FILE_ENV_VAR: &str = "PROTON_PASS_PASSWORD_FILE";
@@ -112,7 +112,7 @@ pub async fn authenticate_client(
             if client.has_totp() {
                 let totp = get_totp()?;
                 client.totp(&totp).await?
-            } else if client.has_fido() {
+            } else if client.fido_details().is_some() {
                 bail!("FIDO authentication is not supported yet");
             } else {
                 bail!("no 2FA available");

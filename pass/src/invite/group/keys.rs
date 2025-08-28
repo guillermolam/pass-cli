@@ -11,7 +11,7 @@ pub struct GroupAddress {
 }
 
 #[derive(Serialize, Deserialize)]
-struct GroupResponse {
+pub(crate) struct GroupResponse {
     #[serde(rename = "ID")]
     pub id: String,
     #[serde(rename = "Name")]
@@ -33,7 +33,7 @@ struct GroupResponse {
 }
 
 #[derive(Serialize, Deserialize)]
-struct GetGroupsResponse {
+pub(crate) struct GetGroupsResponse {
     #[serde(rename = "Groups")]
     pub groups: Vec<GroupResponse>,
 }

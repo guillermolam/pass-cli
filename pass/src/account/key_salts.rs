@@ -1,11 +1,34 @@
 use crate::PassClient;
-use crate::account::{KeyPassphrase, KeyPassphrases, Passphrase};
 use anyhow::{Context, Result, anyhow};
-use muon::rest::core::v4::keys::salts::KeySalt;
 use muon::{Client, GET};
+use pass_domain::{KeyPassphrase, KeyPassphrases, KeySalt, Passphrase};
 use std::path::Path;
 
 const PASSPHRASES_FILE_NAME: &str = "passphrases.enc";
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub(crate) struct GetKeySaltsResponse {
+    #[serde(default, rename = "KeySalts")]
+    pub key_salts: Vec<KeySaltResponse>,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct KeySaltResponse {
+    #[serde(rename = "ID")]
+    pub id: String,
+
+    #[serde(rename = "KeySalt")]
+    pub key_salt: Option<String>,
+}
+
+impl From<KeySaltResponse> for KeySalt {
+    fn from(value: KeySaltResponse) -> Self {
+        Self {
+            id: value.id,
+            key_salt: value.key_salt,
+        }
+    }
+}
 
 #[derive(serde::Deserialize, serde::Serialize)]
 struct SerializedKeyPassphrase {
@@ -19,8 +42,8 @@ impl PassClient {
             .await
             .context("failed to fetch salts")?;
 
-        let passphrases = self
-            .client_features
+        let account_crypto = self.client_features.get_account_crypto().await;
+        let passphrases = account_crypto
             .generate_passphrases(salts, password)
             .await
             .context("failed to generate passphrases")?;
@@ -45,8 +68,9 @@ impl PassClient {
             .encrypt_with_local_key(&serialized)
             .await
             .context("failed to encrypt passphrases")?;
-        self.client_features
-            .store_file(encrypted, Path::new(PASSPHRASES_FILE_NAME))
+
+        let fs = self.client_features.get_fs().await;
+        fs.store_file(encrypted, Path::new(PASSPHRASES_FILE_NAME))
             .await
             .context("failed to store passphrases")?;
 
@@ -54,8 +78,8 @@ impl PassClient {
     }
 
     pub(crate) async fn get_key_passphrases(&self) -> Result<KeyPassphrases> {
-        let exists = self
-            .client_features
+        let fs = self.client_features.get_fs().await;
+        let exists = fs
             .file_exists(Path::new(PASSPHRASES_FILE_NAME))
             .await
             .context("failed to check if passphrases file exists")?;
@@ -64,8 +88,7 @@ impl PassClient {
             return Err(anyhow::anyhow!("Passphrases file not found"));
         }
 
-        let contents = self
-            .client_features
+        let contents = fs
             .get_file(Path::new(PASSPHRASES_FILE_NAME))
             .await
             .context("failed to get passphrases file")?;
@@ -82,7 +105,7 @@ impl PassClient {
                 .context("failed to decode passphrase")?;
             res.push(KeyPassphrase {
                 id: passphrase.key_id,
-                passphrase: Passphrase(decoded),
+                passphrase: Passphrase::new(decoded),
             })
         }
 
@@ -95,7 +118,8 @@ async fn fetch_salts(client: &Client) -> Result<Vec<KeySalt>> {
     if !res.status().is_success() {
         return Err(anyhow!("HTTP Status: {:?}", res.status()));
     }
-    let res: muon::rest::core::v4::keys::salts::GetRes = res.ok()?.into_body_json()?;
+    let res: GetKeySaltsResponse = res.ok()?.into_body_json()?;
 
-    Ok(res.key_salts)
+    let mapped = res.key_salts.into_iter().map(KeySalt::from).collect();
+    Ok(mapped)
 }

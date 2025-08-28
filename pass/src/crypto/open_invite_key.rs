@@ -1,6 +1,6 @@
 use crate::invite::list::{DecryptedInviteKey, InviteKey, OpenedInviteKey};
-use crate::{PgpCrypto, PrivateKey, PublicKey, UnlockedAddressKeys};
 use anyhow::{Context, Result};
+use pass_domain::{PgpCrypto, PublicKey, UnlockedAddressKeys};
 use std::sync::Arc;
 
 pub(crate) struct OpenInviteKeyFlow {
@@ -25,10 +25,8 @@ impl OpenInviteKeyFlow {
     pub async fn open(self, invite_keys: Vec<InviteKey>) -> Result<Vec<OpenedInviteKey>> {
         let mut private_keys = vec![];
 
-        for address_key in self.user_address_keys.keys.into_values() {
-            private_keys.push(PrivateKey {
-                content: address_key.private_key.content.clone(),
-            });
+        for address_key in self.user_address_keys.value().into_values() {
+            private_keys.push(address_key.private_key);
         }
 
         let mut res = Vec::with_capacity(invite_keys.len());

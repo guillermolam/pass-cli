@@ -1,104 +1,59 @@
-mod account;
-mod pgp;
-
-use crate::features::account::AccountCrypto;
-use crate::features::pgp::NativePgpCrypto;
 use crate::storage::get_local_key;
-use anyhow::{Context, Result};
-use pass::{
-    ApiKey, ApiKeySalt, ClientFeatures, Passphrase, PrivateKey, PublicKey, UnlockedAddressKeys,
-    UserKey, UserKeyExt,
-};
-use pass_domain::AddressKey;
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use anyhow::Result;
+use pass_domain::{AccountCrypto, ClientFeatures, FsStorage, LocalKeyProvider};
+use pass_fs::RealFsStorage;
+use pass_pgp::{NativePgpCrypto, ProtonAccountCrypto};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct CliClientFeatures {
-    pub base_dir: PathBuf,
+    pub storage: Arc<RealFsStorage>,
+    pub key_provider: Arc<FsLocalKeyProvider>,
 }
 
 impl CliClientFeatures {
+    pub fn new(base_dir: PathBuf) -> Self {
+        Self {
+            storage: Arc::new(RealFsStorage::new(base_dir.clone())),
+            key_provider: Arc::new(FsLocalKeyProvider::new(base_dir)),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct FsLocalKeyProvider {
+    base_dir: PathBuf,
+}
+
+impl FsLocalKeyProvider {
     pub fn new(base_dir: PathBuf) -> Self {
         Self { base_dir }
     }
 }
 
 #[async_trait::async_trait]
-impl ClientFeatures for CliClientFeatures {
-    async fn get_local_key(&self) -> Result<Vec<u8>> {
+impl LocalKeyProvider for FsLocalKeyProvider {
+    async fn get_key(&self) -> Result<Vec<u8>> {
         get_local_key(&self.base_dir).await
     }
+}
 
-    async fn get_file(&self, path: &Path) -> Result<Vec<u8>> {
-        tokio::fs::read(self.base_dir.join(path))
-            .await
-            .context("Error reading file")
+#[async_trait::async_trait]
+impl ClientFeatures for CliClientFeatures {
+    async fn get_local_key_provider(&self) -> Result<Arc<dyn LocalKeyProvider>> {
+        Ok(self.key_provider.clone())
     }
 
-    async fn file_exists(&self, path: &Path) -> Result<bool> {
-        match tokio::fs::metadata(self.base_dir.join(path)).await {
-            Ok(metadata) => Ok(metadata.is_file()),
-            Err(e) => {
-                if e.kind() == std::io::ErrorKind::NotFound {
-                    Ok(false)
-                } else {
-                    Err(e.into())
-                }
-            }
-        }
+    async fn get_account_crypto(&self) -> Arc<dyn AccountCrypto> {
+        Arc::new(ProtonAccountCrypto)
     }
 
-    async fn store_file(&self, contents: Vec<u8>, path: &Path) -> Result<()> {
-        tokio::fs::write(self.base_dir.join(path), &contents)
-            .await
-            .context("Error writing file")?;
-        Ok(())
+    async fn get_fs(&self) -> Arc<dyn FsStorage> {
+        self.storage.clone()
     }
 
-    async fn remove_file(&self, path: &Path) -> Result<()> {
-        tokio::fs::remove_file(self.base_dir.join(path))
-            .await
-            .context("Error deleting file")
-    }
-
-    async fn generate_passphrases(
-        &self,
-        key_salts: Vec<ApiKeySalt>,
-        pass: &str,
-    ) -> Result<HashMap<String, Passphrase>> {
-        AccountCrypto.generate_passphrases(key_salts, pass)
-    }
-
-    async fn open_user_keys(
-        &self,
-        keys: Vec<ApiKey>,
-        passphrases: HashMap<String, Passphrase>,
-    ) -> Result<Vec<UserKey>> {
-        AccountCrypto.open_user_keys(keys, passphrases)
-    }
-
-    async fn open_address_keys(
-        &self,
-        user_keys: Vec<UserKey>,
-        address_keys: Vec<AddressKey>,
-    ) -> Result<UnlockedAddressKeys> {
-        let (private, public) = user_keys.split_keys();
-        self.open_address_keys_with_keys(private, public, address_keys)
-            .await
-    }
-
-    async fn open_address_keys_with_keys(
-        &self,
-        private_keys: Vec<PrivateKey>,
-        public_keys: Vec<PublicKey>,
-        address_keys: Vec<AddressKey>,
-    ) -> Result<UnlockedAddressKeys> {
-        AccountCrypto.open_address_keys(private_keys, public_keys, address_keys)
-    }
-
-    async fn get_pgp_crypto(&self) -> Arc<dyn pass::PgpCrypto> {
+    async fn get_pgp_crypto(&self) -> Arc<dyn pass_domain::PgpCrypto> {
         Arc::new(NativePgpCrypto)
     }
 }

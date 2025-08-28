@@ -21,3 +21,31 @@ impl PassClient {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_tools::*;
+    use std::sync::Arc;
+
+    use muon::test::server::{HTTP, Server};
+
+    #[muon::test(scheme(HTTP))]
+    async fn test_delete_vault(server: Arc<Server>) {
+        const SHARE_ID: &str = "MyShareID";
+
+        let client = server.pass_client().await;
+        let handled = server.handler_with_method(
+            Method::DELETE,
+            format!("/pass/v1/vault/{SHARE_ID}"),
+            |_| success(Empty),
+        );
+
+        client
+            .delete_vault(&ShareId::new(SHARE_ID.to_string()))
+            .await
+            .expect("Should have been able to delete the vault");
+
+        assert_hit!(handled);
+    }
+}

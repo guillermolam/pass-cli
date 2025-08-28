@@ -71,3 +71,100 @@ impl PassClient {
         Err(anyhow!("Address not found"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_tools::*;
+    use std::sync::Arc;
+
+    use muon::test::server::{HTTP, Server};
+
+    #[muon::test(scheme(HTTP))]
+    async fn can_handle_empty_addresses(s: Arc<Server>) {
+        s.handler("/addresses", |_| {
+            success(addresses::GetRes { addresses: vec![] })
+        });
+
+        let client = s.pass_client_no_setup();
+        let addresses = client
+            .get_addresses()
+            .await
+            .expect("Should be able to get addresses");
+        assert!(addresses.is_empty());
+    }
+
+    #[muon::test(scheme(HTTP))]
+    async fn can_handle_addresses(s: Arc<Server>) {
+        const A1_ID: &str = "address1";
+        const A1_EMAIL: &str = "address1@test.com";
+        const A2_ID: &str = "address2";
+        const A2_EMAIL: &str = "address2@test.com";
+
+        s.handler("/addresses", |_| {
+            success(addresses::GetRes {
+                addresses: vec![
+                    addresses::Address {
+                        id: A1_ID.to_string(),
+                        email: A1_EMAIL.to_string(),
+                        keys: vec![],
+                    },
+                    addresses::Address {
+                        id: A2_ID.to_string(),
+                        email: A2_EMAIL.to_string(),
+                        keys: vec![],
+                    },
+                ],
+            })
+        });
+
+        let client = s.pass_client_no_setup();
+        let addresses = client
+            .get_addresses()
+            .await
+            .expect("Should be able to get addresses");
+        assert_eq!(addresses.len(), 2);
+        assert_eq!(A1_ID, addresses[0].id.value());
+        assert_eq!(A1_EMAIL, addresses[0].email);
+        assert_eq!(A2_ID, addresses[1].id.value());
+        assert_eq!(A2_EMAIL, addresses[1].email);
+    }
+
+    #[muon::test(scheme(HTTP))]
+    async fn caches_addresses(s: Arc<Server>) {
+        const A1_ID: &str = "address1";
+        const A1_EMAIL: &str = "address1@test.com";
+
+        s.handler("/addresses", |_| {
+            success(addresses::GetRes {
+                addresses: vec![addresses::Address {
+                    id: A1_ID.to_string(),
+                    email: A1_EMAIL.to_string(),
+                    keys: vec![],
+                }],
+            })
+        });
+
+        let client = s.pass_client_no_setup();
+
+        let recorder = s.new_recorder();
+
+        // First request
+        client
+            .get_addresses()
+            .await
+            .expect("Should be able to get addresses");
+
+        let requests_1 = recorder.read().len();
+
+        // Second request
+        client
+            .get_addresses()
+            .await
+            .expect("Should be able to get addresses");
+
+        let requests_2 = recorder.read().len();
+
+        assert_eq!(requests_1, requests_2);
+    }
+}
