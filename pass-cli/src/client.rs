@@ -11,9 +11,7 @@ use std::io::Read;
 const ENVIRONMENT_ENV_VAR: &str = "ENVIRONMENT";
 const XDEBUG_SESSION_ENV_VAR: &str = "XDEBUG_SESSION";
 const XDEBUG_SESSION_HEADER: &str = "XDEBUG_SESSION";
-const APP_HEADER: &str = "ios-mail@7.1.0";
-//const APP_HEADER: &str = "Linux-pass@1.0.0";
-//const APP_HEADER: &str = "web-pass@5.0.999.999";
+const APP_NAME: &str = "cli-pass";
 
 const PASSWORD_ENV_VAR: &str = "PROTON_PASS_PASSWORD";
 const PASSWORD_FILE_ENV_VAR: &str = "PROTON_PASS_PASSWORD_FILE";
@@ -127,12 +125,16 @@ pub async fn authenticate_client(
     Ok(AuthenticatedClient { client, password })
 }
 
+fn default_app_header() -> String {
+    format!("{}@{}", APP_NAME, env!("CARGO_PKG_VERSION"))
+}
+
 fn get_app_header() -> String {
-    std::env::var(APP_HEADER_ENV_VAR).unwrap_or_else(|_| APP_HEADER.to_string())
+    std::env::var(APP_HEADER_ENV_VAR).unwrap_or_else(|_| default_app_header())
 }
 
 pub async fn get_client() -> anyhow::Result<Client> {
-    let app = App::new(get_app_header())?;
+    let app = App::new(get_app_header()).context("failed to create app")?;
 
     let base_dir = crate::utils::get_base_dir().context("failed to get base dir")?;
     let store = AuthenticatorStore::get_from_local(base_dir.clone())
