@@ -11,6 +11,7 @@ pass-pgp = { path = "../pass-pgp" }
 
 clap = { version = "4.5", features = ["derive"] }
 handlebars = "6.3.2"
+keyring = { version = "3.6.3", features = ["apple-native", "sync-secret-service", "windows-native"], optional = true}
 libc = "0.2"
 regex = "1.10"
 rpassword = "7.3.1"
@@ -33,3 +34,4 @@ tempfile = "3.8"
 [features]
 default = []
 internal = []
+keyring-provider = ["keyring/apple-native", "keyring/sync-secret-service", "keyring/windows-native"]

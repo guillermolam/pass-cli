@@ -17,24 +17,33 @@ fn create_key_file(path: &Path) -> anyhow::Result<File> {
 }
 
 pub async fn get_local_key(base_dir: &Path) -> anyhow::Result<Vec<u8>> {
-    let session_path_absolute =
-        std::fs::canonicalize(base_dir).context("error getting absolute path")?;
-    let key_path = session_path_absolute.join("local.key");
-
-    if key_path.exists() && key_path.is_file() {
-        return tokio::fs::read(&key_path)
+    #[cfg(feature = "keyring-provider")]
+    {
+        crate::features::keyring::get_local_key()
             .await
-            .context("Error reading local key file");
+            .context("Error getting local key from keyring")
     }
+    #[cfg(not(feature = "keyring-provider"))]
+    {
+        let session_path_absolute =
+            std::fs::canonicalize(base_dir).context("error getting absolute path")?;
+        let key_path = session_path_absolute.join("local.key");
 
-    info!("Couldn't find local key file, generating one");
+        if key_path.exists() && key_path.is_file() {
+            return tokio::fs::read(&key_path)
+                .await
+                .context("Error reading local key file");
+        }
 
-    create_key_file(&key_path).context("Error creating local key file")?;
+        info!("Couldn't find local key file, generating one");
 
-    let key = pass_domain::crypto::generate_encryption_key();
-    tokio::fs::write(key_path, &key)
-        .await
-        .context("Error writing key")?;
+        create_key_file(&key_path).context("Error creating local key file")?;
 
-    Ok(key)
+        let key = pass_domain::crypto::generate_encryption_key();
+        tokio::fs::write(key_path, &key)
+            .await
+            .context("Error writing key")?;
+
+        Ok(key)
+    }
 }

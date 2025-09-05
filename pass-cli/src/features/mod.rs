@@ -1,3 +1,6 @@
+#[cfg(feature = "keyring-provider")]
+pub(crate) mod keyring;
+
 use crate::storage::get_local_key;
 use anyhow::Result;
 use pass_domain::{AccountCrypto, ClientFeatures, FsStorage, LocalKeyProvider};
@@ -6,17 +9,27 @@ use pass_pgp::{NativePgpCrypto, ProtonAccountCrypto};
 use std::path::PathBuf;
 use std::sync::Arc;
 
+#[cfg(not(feature = "keyring-provider"))]
+fn get_key_provider(base_dir: PathBuf) -> Arc<dyn LocalKeyProvider + Send + Sync> {
+    Arc::new(FsLocalKeyProvider::new(base_dir))
+}
+
+#[cfg(feature = "keyring-provider")]
+fn get_key_provider(_base_dir: PathBuf) -> Arc<dyn LocalKeyProvider + Send + Sync> {
+    Arc::new(keyring::KeyringKeyProvider::default())
+}
+
 #[derive(Clone)]
 pub struct CliClientFeatures {
     pub storage: Arc<RealFsStorage>,
-    pub key_provider: Arc<FsLocalKeyProvider>,
+    pub key_provider: Arc<dyn LocalKeyProvider + Send + Sync>,
 }
 
 impl CliClientFeatures {
     pub fn new(base_dir: PathBuf) -> Self {
         Self {
             storage: Arc::new(RealFsStorage::new(base_dir.clone())),
-            key_provider: Arc::new(FsLocalKeyProvider::new(base_dir)),
+            key_provider: get_key_provider(base_dir),
         }
     }
 }
