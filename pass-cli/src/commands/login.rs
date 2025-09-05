@@ -39,5 +39,7 @@ pub async fn run(username: &str, client: Client) -> Result<()> {
         info!("Created vault with id: {}", share_id);
     }
 
+    println!("Successfully logged in as {username}");
+
     Ok(())
 }
