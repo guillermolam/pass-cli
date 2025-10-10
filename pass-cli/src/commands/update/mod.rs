@@ -11,8 +11,10 @@ use std::path::PathBuf;
 pub use check::check_for_updates_background;
 
 const ENV_NO_UPDATE_CHECK: &str = "PROTON_PASS_NO_UPDATE_CHECK";
-const ENV_AUTOUPDATE_URL: &str = "PROTON_PASS_AUTOUPDATE_URL";
 const DEFAULT_MANIFEST_URL: &str = "https://protonapps.com/download/pass-cli/versions.json";
+
+#[cfg(debug_assertions)]
+const ENV_AUTOUPDATE_URL: &str = "PROTON_PASS_AUTOUPDATE_URL";
 
 // In debug mode, allow changing the auto_update url
 #[cfg(debug_assertions)]
