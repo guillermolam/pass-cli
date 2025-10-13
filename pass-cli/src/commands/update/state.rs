@@ -20,10 +20,14 @@ pub async fn get_last_check(base_dir: &Path) -> Result<Option<chrono::DateTime<c
         .await
         .context("Failed to read last check file")?;
 
-    let timestamp = chrono::DateTime::parse_from_rfc3339(contents.trim())
-        .context("Failed to parse timestamp")?;
-
-    Ok(Some(timestamp.with_timezone(&chrono::Utc)))
+    match chrono::DateTime::parse_from_rfc3339(contents.trim()) {
+        Ok(timestamp) => Ok(Some(timestamp.with_timezone(&chrono::Utc))),
+        Err(e) => {
+            // In case of error force re-check
+            error!("Failed to parse timestamp: {e}");
+            Ok(None)
+        }
+    }
 }
 
 pub async fn update_last_check(base_dir: &Path) -> Result<()> {
