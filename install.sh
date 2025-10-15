@@ -2,8 +2,8 @@
 set -e
 
 # Proton Pass CLI Installation Script
-# Usage: curl -fsSL https://example.com/install.sh | bash
-# Or with custom install dir: PASS_CLI_INSTALL_DIR=/custom/path bash install.sh
+# Usage: curl -fsSL https://proton.me/download/pass-cli/install.sh | bash
+# Or with custom install dir: PROTON_PASS_CLI_INSTALL_DIR=/custom/path bash install.sh
 # Or with custom channel: PROTON_PASS_CLI_INSTALL_CHANNEL=beta bash install.sh
 
 MANIFEST_BASE_URL="https://proton.me/download/pass-cli/"
@@ -30,11 +30,11 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    echo -e "${GREEN}[INFO]${NC} $1" >&2
 }
 
 log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    echo -e "${YELLOW}[WARN]${NC} $1" >&2
 }
 
 log_error() {
@@ -147,7 +147,7 @@ fetch_binary_info() {
     # Extract URL and hash for platform
     url=$(echo "$manifest" | jq -r ".passCliVersions.urls.\"$os\".\"$arch\".url")
     hash=$(echo "$manifest" | jq -r ".passCliVersions.urls.\"$os\".\"$arch\".hash")
-    
+
     if [ -z "$url" ] || [ "$url" = "null" ] || [ -z "$hash" ] || [ "$hash" = "null" ]; then
         log_error "No binary available for platform: $os/$arch"
         exit 1
@@ -276,8 +276,8 @@ check_linux_dependencies() {
 
 # Determine install directory
 get_install_dir() {
-    if [ -n "$PASS_CLI_INSTALL_DIR" ]; then
-        echo "$PASS_CLI_INSTALL_DIR"
+    if [ -n "$PROTON_PASS_CLI_INSTALL_DIR" ]; then
+        echo "$PROTON_PASS_CLI_INSTALL_DIR"
         return
     fi
     
@@ -370,9 +370,11 @@ main() {
     version=$(echo "$binary_info" | cut -d'|' -f1)
     url=$(echo "$binary_info" | cut -d'|' -f2)
     hash=$(echo "$binary_info" | cut -d'|' -f3)
-    
+
+    log_info "Download URL: $url"
+    log_info "Binary hash: $hash"
+
     # Download binary
-    local temp_file
     temp_file=$(mktemp)
 
     # Set up trap so we remove the temp_file in case of exit

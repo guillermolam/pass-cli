@@ -1,8 +1,8 @@
 #!/usr/bin/env pwsh
 
 # Proton Pass CLI Installation Script for Windows
-# Usage: Invoke-WebRequest -Uri https://example.com/install.ps1 -OutFile install.ps1; .\install.ps1
-# Or with custom install dir: $env:PASS_CLI_INSTALL_DIR="C:\custom\path"; .\install.ps1
+# Usage: Invoke-WebRequest -Uri https://proton.me/download/pass-cli/install.ps1 -OutFile install.ps1; .\install.ps1
+# Or with custom install dir: $env:PROTON_PASS_CLI_INSTALL_DIR="C:\custom\path"; .\install.ps1
 # Or with custom channel: $env:PROTON_PASS_CLI_INSTALL_CHANNEL="beta"; .\install.ps1
 
 $ErrorActionPreference = "Stop"
@@ -160,8 +160,8 @@ function Download-Binary {
 
 # Get install directory
 function Get-InstallDir {
-    if ($env:PASS_CLI_INSTALL_DIR) {
-        return $env:PASS_CLI_INSTALL_DIR
+    if ($env:PROTON_PASS_CLI_INSTALL_DIR) {
+        return $env:PROTON_PASS_CLI_INSTALL_DIR
     }
     
     # Default to user's local programs directory
