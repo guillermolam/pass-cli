@@ -6,7 +6,7 @@ set -e
 # Or with custom install dir: PASS_CLI_INSTALL_DIR=/custom/path bash install.sh
 # Or with custom channel: PROTON_PASS_CLI_INSTALL_CHANNEL=beta bash install.sh
 
-MANIFEST_BASE_URL="https://protonapps.com/download/pass-cli/"
+MANIFEST_BASE_URL="https://proton.me/download/pass-cli/"
 BINARY_NAME="pass-cli"
 
 # Get manifest URL based on channel

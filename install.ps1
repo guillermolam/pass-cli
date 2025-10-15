@@ -7,7 +7,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$MANIFEST_BASE_URL = "https://protonapps.com/download/pass-cli/"
+$MANIFEST_BASE_URL = "https://proton.me/download/pass-cli/"
 $BINARY_NAME = "pass-cli.exe"
 
 # Get manifest URL based on channel
