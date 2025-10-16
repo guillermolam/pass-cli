@@ -12,7 +12,7 @@ pub use check::check_for_updates_background;
 
 const ENV_NO_UPDATE_CHECK: &str = "PROTON_PASS_NO_UPDATE_CHECK";
 const ENV_UPDATE_VERSION_STRATEGY: &str = "PASS_CLI_UPDATE_VERSION_STRATEGY";
-const MANIFEST_BASE_URL: &str = "https://protonapps.com/download/pass-cli/";
+const MANIFEST_BASE_URL: &str = "https://proton.me/download/pass-cli/";
 
 fn get_default_manifest_url() -> String {
     format!("{}versions.json", MANIFEST_BASE_URL)
