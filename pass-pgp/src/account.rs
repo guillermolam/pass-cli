@@ -215,7 +215,10 @@ impl AccountCrypto for ProtonAccountCrypto {
             let key_id = &user_key.id.0;
             let key_secret = match passphrases.get(key_id) {
                 Some(key_secret) => KeySecret::new(key_secret.as_ref().to_vec()),
-                None => return Err(anyhow!("Could not find passphrase for key {key_id}")),
+                None => {
+                    warn!("Could not find passphrase for key {key_id}");
+                    continue;
+                }
             };
 
             let res = user_keys.unlock(&provider, &key_secret);

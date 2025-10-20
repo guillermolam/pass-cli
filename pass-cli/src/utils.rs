@@ -1,4 +1,5 @@
 use anyhow::Context;
+use std::io::Write;
 use std::path::PathBuf;
 
 const PROTON_PASS_SESSION_DIR_ENV: &str = "PROTON_PASS_SESSION_DIR";
@@ -10,15 +11,18 @@ pub fn ask_for_input(prompt: &str, secure: bool) -> anyhow::Result<String> {
     } else {
         let stdin = std::io::stdin();
         loop {
-            let mut username = String::new();
-            println!("{prompt}");
+            let mut value = String::new();
+            std::io::stdout()
+                .write(prompt.as_bytes())
+                .context("Error writing to stdout")?;
+            std::io::stdout().flush().context("Error flushing stdout")?;
 
-            stdin.read_line(&mut username)?;
+            stdin.read_line(&mut value)?;
 
-            if !username.trim().is_empty() {
-                return Ok(username.replace("\n", "").trim().to_string());
+            if !value.trim().is_empty() {
+                return Ok(value.replace("\n", "").trim().to_string());
             } else {
-                eprintln!("Username is empty");
+                eprintln!("Value is empty");
             }
         }
     }

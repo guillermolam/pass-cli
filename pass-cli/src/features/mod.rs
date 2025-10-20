@@ -20,7 +20,7 @@ fn get_key_provider(base_dir: PathBuf) -> Result<Arc<dyn LocalKeyProvider>> {
         }
         "keyring" | "" => {
             info!("Using keyring-based local key provider");
-            Ok(Arc::new(keyring::KeyringKeyProvider::new()))
+            Ok(Arc::new(keyring::KeyringKeyProvider::new(base_dir)?))
         }
         _ => Err(anyhow::anyhow!(
             "Invalid PASS_CLI_KEY_PROVIDER value: '{}'. Valid values are 'fs' or 'keyring'",
