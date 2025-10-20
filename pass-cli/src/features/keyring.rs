@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use keyring::{Entry, Error as KeyringError};
 use pass_domain::LocalKeyProvider;
+use std::path::PathBuf;
 use tokio::sync::RwLock;
 
 const KEYRING_SERVICE_NAME: &str = "ProtonPassCLI";
@@ -9,14 +10,21 @@ const KEYRING_CREDENTIAL_NAME: &str = "cli-local-key";
 pub struct KeyringKeyProvider {
     key: RwLock<Option<Vec<u8>>>,
     xor_key: u8,
+    base_dir: PathBuf,
 }
 
 impl KeyringKeyProvider {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(base_dir: PathBuf) -> Result<Self> {
+        Ok(Self {
             key: RwLock::new(None),
             xor_key: pass_domain::crypto::generate_random_byte(),
-        }
+            base_dir,
+        })
+    }
+
+    fn session_exists(&self) -> bool {
+        let session_path = self.base_dir.join(crate::store::FILE_NAME);
+        session_path.exists() && session_path.is_file()
     }
 
     fn build_entry() -> Result<Entry> {
@@ -26,13 +34,30 @@ impl KeyringKeyProvider {
         Ok(entry)
     }
 
-    async fn get_local_key() -> Result<Vec<u8>> {
+    async fn get_local_key(&self) -> Result<Vec<u8>> {
         let entry = Self::build_entry()?;
 
         match entry.get_secret() {
             Ok(cred) => Ok(cred),
             Err(e) => match e {
                 KeyringError::NoEntry => {
+                    // Check if session exists - if so, we have a problem
+                    if self.session_exists() {
+                        eprintln!(
+                            "Error: Local encryption key not found but session exists. Forcing logout for security."
+                        );
+                        eprintln!("Run 'pass-cli login' to authenticate again.");
+
+                        // Perform force logout
+                        if let Err(logout_err) = crate::commands::logout::force_logout().await {
+                            error!("Error during force logout: {logout_err:#}");
+                        }
+
+                        return Err(anyhow::anyhow!(
+                            "Local encryption key not found. Session has been cleared. Please log in again."
+                        ));
+                    }
+
                     info!("Credential not found in Keyring. Creating one");
                     let cred = pass_domain::crypto::generate_encryption_key();
                     entry
@@ -66,7 +91,8 @@ impl LocalKeyProvider for KeyringKeyProvider {
         } else {
             drop(key_guard);
             let mut write_key_guard = self.key.write().await;
-            let key = Self::get_local_key()
+            let key = self
+                .get_local_key()
                 .await
                 .context("Could not get local key from keyring")?;
 
