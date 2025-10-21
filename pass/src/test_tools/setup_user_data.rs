@@ -153,6 +153,7 @@ pub fn setup_user_access_with_limits(
                     storage_max_file_size: 0,
                     storage_used: 0,
                     storage_quota: 0,
+                    cli_allowed: true,
                 },
                 monitor: MonitorStatus {
                     proton_address: false,

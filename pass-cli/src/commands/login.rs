@@ -30,15 +30,11 @@ async fn is_login_allowed(client: &PassClient) -> Result<bool> {
 
     let plan = info.plan;
     debug!("Checking is_login_allowed with plan {:?}", plan);
-    if plan.type_ == pass::PlanType::Free {
-        debug!("Free plans are not allowed");
-        return Ok(false);
+    if !plan.cli_allowed {
+        warn!("Your account is not allowed to use the CLI");
     }
 
-    match plan.internal_name.as_str() {
-        "visionary2022" | "bundlepro2024" => Ok(true),
-        _ => Ok(false),
-    }
+    Ok(plan.cli_allowed)
 }
 
 pub async fn run(

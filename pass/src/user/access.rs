@@ -69,6 +69,9 @@ pub struct PassPlan {
     /// What is the storage quota for this user
     #[serde(rename = "StorageQuota")]
     pub storage_quota: u64,
+    /// Can use CLI flag
+    #[serde(rename = "CliAllowed")]
+    pub cli_allowed: bool,
 }
 
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
