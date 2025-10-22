@@ -10,8 +10,15 @@ resolver = "2"
 
 [workspace.dependencies]
 muon = { version = "1.8.0", registry = "proton", features = ["tls-tokio-rustls", "unsealed", "util", "testing-runner", "testing-server", "other-platform"] }
-proton-crypto = { git = "ssh://git@gitlab.protontech.ch/rust/proton-crypto-rs.git", rev = "95305a122068d6db8aa2d2835c10687b9c507c07" }
-proton-crypto-account = { git = "ssh://git@gitlab.protontech.ch/rust/proton-crypto-rs.git", rev = "95305a122068d6db8aa2d2835c10687b9c507c07" }
+
+# Rust crypto
+# proton-crypto = { git = "ssh://git@gitlab.protontech.ch/rust/proton-crypto-rs.git", rev = "95305a122068d6db8aa2d2835c10687b9c507c07" }
+# proton-crypto-account = { git = "ssh://git@gitlab.protontech.ch/rust/proton-crypto-rs.git", rev = "95305a122068d6db8aa2d2835c10687b9c507c07" }
+
+# Golang crypto
+proton-crypto = { git = "ssh://git@gitlab.protontech.ch/rust/proton-crypto-rs.git", tag = "release-2025-08-09" }
+proton-crypto-account = { git = "ssh://git@gitlab.protontech.ch/rust/proton-crypto-rs.git", tag = "release-2025-08-09" }
+
 proton-pass-common = {  git = "ssh://git@gitlab.protontech.ch/proton/clients/pass/proton-pass-common.git", tag = "0.25.9" }
 
 anyhow = "1.0"
