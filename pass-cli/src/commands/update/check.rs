@@ -1,5 +1,5 @@
-use std::io::IsTerminal;
 use anyhow::Result;
+use std::io::IsTerminal;
 use std::path::Path;
 
 use super::{get_manifest_url, is_autoupdate_disabled, state};
