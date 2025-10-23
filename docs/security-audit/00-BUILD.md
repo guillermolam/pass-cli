@@ -74,7 +74,7 @@ The project uses several Cargo features that can be enabled during compilation:
 
 - `keyring` (enabled by default) - Enables system keyring integration for securely storing the local encryption key
 - `internal` - Enables internal testing commands (not recommended for production)
-- `no-login-restriction` - Disables login restrictions for testing
+- `no-login-restriction` - Disables login restrictions for testing. Currently only paid accounts are allowed to login. If this is disabled the client will not make the check.
 
 To build without default features:
 
