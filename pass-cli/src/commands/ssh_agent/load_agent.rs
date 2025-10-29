@@ -5,7 +5,7 @@ use ssh_key::private::PrivateKey as SshPrivateKey;
 use std::path::PathBuf;
 
 use super::VaultQuery;
-use super::pass_key;
+use super::key_load;
 
 fn get_system_agent_socket() -> Result<PathBuf> {
     let sock_path = std::env::var("SSH_AUTH_SOCK").context(
@@ -47,7 +47,7 @@ pub async fn run_load(
         SshAgentClient::connect(&socket_path).context("Failed to connect to SSH agent")?;
 
     info!("Connected to SSH agent, Loading SSH keys");
-    let identities = pass_key::load_keys_into_storage(&client, &vault_query)
+    let identities = key_load::load_keys_into_storage(&client, &vault_query)
         .await
         .context("Failed to load SSH keys from vaults")?;
 

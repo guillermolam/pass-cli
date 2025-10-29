@@ -1,7 +1,7 @@
 mod agent;
+mod key_load;
 mod key_storage;
 mod load_agent;
-mod pass_key;
 
 use anyhow::{Context, Result, anyhow, bail};
 use clap::Subcommand;
@@ -98,7 +98,7 @@ async fn run_start(
 
     info!("Loading SSH keys from Proton Pass...");
 
-    let identities = pass_key::load_keys_into_storage(&client, &vault_query)
+    let identities = key_load::load_keys_into_storage(&client, &vault_query)
         .await
         .context("Failed to load SSH keys from vaults")?;
 
