@@ -3,6 +3,7 @@ mod custom;
 mod identity;
 mod login;
 mod note;
+mod ssh_key;
 mod wifi;
 
 use anyhow::Result;
@@ -42,6 +43,12 @@ pub enum CreateCommands {
         #[command(flatten)]
         args: identity::IdentityArgs,
     },
+    /// Create a new SSH key item
+    #[command(name = "ssh-key")]
+    SshKey {
+        #[command(flatten)]
+        args: ssh_key::SshKeyArgs,
+    },
 }
 
 pub async fn run(command: CreateCommands, client: PassClient) -> Result<()> {
@@ -52,5 +59,6 @@ pub async fn run(command: CreateCommands, client: PassClient) -> Result<()> {
         CreateCommands::Wifi { args } => wifi::run(args, client).await,
         CreateCommands::Custom { args } => custom::run(args, client).await,
         CreateCommands::Identity { args } => identity::run(args, client).await,
+        CreateCommands::SshKey { args } => ssh_key::run(args, client).await,
     }
 }
