@@ -18,7 +18,14 @@ pub async fn check_for_updates_background(base_dir: &Path) -> Result<()> {
         return Ok(());
     }
 
-    let manifest_url = get_manifest_url();
+    let manifest_url = match get_manifest_url(base_dir).await {
+        Ok(url) => url,
+        Err(_) => {
+            let _ = state::update_last_check(base_dir).await;
+            return Ok(());
+        }
+    };
+
     let manifest = match manifest::fetch_manifest(&manifest_url).await {
         Ok(m) => m,
         Err(_) => {

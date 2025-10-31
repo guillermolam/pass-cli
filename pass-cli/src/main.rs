@@ -130,6 +130,11 @@ enum Commands {
     Update {
         #[arg(short, long, help = "Skip confirmation prompt")]
         yes: bool,
+        #[arg(
+            long,
+            help = "Change the release track to check updates (default: stable)"
+        )]
+        set_track: Option<String>,
     },
 }
 
@@ -178,8 +183,8 @@ async fn main() -> Result<()> {
         Commands::Password { command } => {
             return commands::password::run(command).await;
         }
-        Commands::Update { yes } => {
-            return commands::update::run(*yes, base_dir.clone()).await;
+        Commands::Update { yes, set_track } => {
+            return commands::update::run(*yes, set_track.clone(), base_dir.clone()).await;
         }
         _ => {}
     };
@@ -206,7 +211,7 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::Logout { .. } => commands::logout::run(client).await,
         Commands::Test => commands::test::run(client).await,
-        Commands::Info => commands::info::run(client).await,
+        Commands::Info => commands::info::run(client, base_dir).await,
         Commands::Inject {
             file_mode,
             force,

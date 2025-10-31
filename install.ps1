@@ -202,14 +202,32 @@ function Install-Binary {
     
     # Clean up temp file
     Remove-Item -Path $TempFile -Force -ErrorAction SilentlyContinue
-    
+
     Write-Info "Installation complete!"
     Write-Host ""
-    
+
+    # Set release track if custom channel was used during installation
+    $channel = $env:PROTON_PASS_CLI_INSTALL_CHANNEL
+    if ($null -ne $channel) {
+        $channel = $channel.Trim()
+    }
+
+    if (-not [string]::IsNullOrEmpty($channel) -and $channel -ne "stable") {
+        Write-Info "Setting release track to $channel..."
+        try {
+            $output = & $targetPath update --set-track $channel 2>&1
+            Write-Info "Release track set successfully"
+        }
+        catch {
+            Write-Warn "Could not set release track automatically. You can set it manually later with: $BINARY_NAME update --set-track $channel"
+        }
+        Write-Host ""
+    }
+
     # Check if install dir is in PATH
     $pathDirs = $env:PATH -split ';'
     $inPath = $pathDirs -contains $installDir
-    
+
     if (-not $inPath) {
         Write-Warn "Installation directory is not in your PATH"
         Write-Host ""

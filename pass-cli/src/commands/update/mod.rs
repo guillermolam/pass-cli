@@ -4,11 +4,13 @@ mod manifest;
 mod platform;
 mod replace;
 mod state;
+mod track;
 
 use anyhow::{Context, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub use check::check_for_updates_background;
+pub use track::get_release_track;
 
 const ENV_NO_UPDATE_CHECK: &str = "PROTON_PASS_NO_UPDATE_CHECK";
 const ENV_UPDATE_VERSION_STRATEGY: &str = "PASS_CLI_UPDATE_VERSION_STRATEGY";
@@ -18,31 +20,33 @@ fn get_default_manifest_url() -> String {
     format!("{}versions.json", MANIFEST_BASE_URL)
 }
 
+fn get_manifest_url_for_track(track: &str) -> String {
+    if track.is_empty() || track == "stable" {
+        get_default_manifest_url()
+    } else {
+        format!("{}versions.{}.json", MANIFEST_BASE_URL, track)
+    }
+}
+
 #[cfg(debug_assertions)]
 const ENV_AUTOUPDATE_URL: &str = "PROTON_PASS_AUTOUPDATE_URL";
 
 // In debug mode, allow changing the auto_update url
 #[cfg(debug_assertions)]
-fn get_manifest_url() -> String {
-    std::env::var(ENV_AUTOUPDATE_URL).unwrap_or_else(|_| get_default_manifest_url())
+async fn get_manifest_url(base_dir: &Path) -> Result<String> {
+    if let Ok(url) = std::env::var(ENV_AUTOUPDATE_URL) {
+        return Ok(url);
+    }
+
+    let track = get_release_track(base_dir).await?;
+    Ok(get_manifest_url_for_track(&track))
 }
 
+// In release mode, use persistent track with optional env var fallback
 #[cfg(not(debug_assertions))]
-const ENV_RELEASE_CHANNEL: &str = "PROTON_PASS_RELEASE_CHANNEL";
-
-// In release mode, enforce the manifest url with optional release channel support
-#[cfg(not(debug_assertions))]
-fn get_manifest_url() -> String {
-    let channel = std::env::var(ENV_RELEASE_CHANNEL)
-        .unwrap_or_default()
-        .trim()
-        .to_string();
-
-    if channel.is_empty() || channel == "stable" {
-        get_default_manifest_url()
-    } else {
-        format!("{}versions.{}.json", MANIFEST_BASE_URL, channel)
-    }
+async fn get_manifest_url(base_dir: &Path) -> Result<String> {
+    let track = get_release_track(base_dir).await?;
+    Ok(get_manifest_url_for_track(&track))
 }
 
 fn is_autoupdate_disabled() -> bool {
@@ -55,18 +59,39 @@ fn is_force_update_strategy() -> bool {
         .unwrap_or(false)
 }
 
-pub async fn run(yes: bool, base_dir: PathBuf) -> Result<()> {
+pub async fn run(yes: bool, set_track: Option<String>, base_dir: PathBuf) -> Result<()> {
+    // Handle --set-track flag
+    if let Some(track_name) = set_track {
+        track::set_persistent_track(&base_dir, &track_name)
+            .await
+            .context("Failed to set release track")?;
+        eprintln!("Update track set to {}", track_name);
+        return Ok(());
+    }
+
     if is_autoupdate_disabled() {
         eprintln!("Auto-update is disabled via {}.", ENV_NO_UPDATE_CHECK);
         return Ok(());
     }
 
-    let manifest_url = get_manifest_url();
+    let manifest_url = get_manifest_url(base_dir.as_path()).await?;
     let current_version = env!("CARGO_PKG_VERSION");
 
-    let manifest = manifest::fetch_manifest(&manifest_url)
-        .await
-        .context("Failed to fetch update manifest")?;
+    let manifest = match manifest::fetch_manifest(&manifest_url).await {
+        Ok(m) => m,
+        Err(e) => {
+            // Check if it's a 404 error and provide helpful message
+            let error_str = e.to_string();
+            if error_str.contains("404") {
+                eprintln!("Failed to fetch update manifest: {}", e);
+                eprintln!("\nThe release track you are on may not exist or may have been removed.");
+                eprintln!("Try running:");
+                eprintln!("    pass-cli update --set-track stable");
+                std::process::exit(1);
+            }
+            return Err(e).context("Failed to fetch update manifest");
+        }
+    };
 
     let version_info = &manifest.pass_cli_versions;
     let latest_version = &version_info.version;

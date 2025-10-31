@@ -332,10 +332,24 @@ install_binary() {
     fi
     
     rm -f "$temp_file"
-    
+
     log_info "Installation complete!"
     echo ""
-    
+
+    # Set release track if custom channel was used during installation
+    channel="${PROTON_PASS_CLI_INSTALL_CHANNEL:-}"
+    channel=$(echo "$channel" | tr -d ' ')
+
+    if [ -n "$channel" ] && [ "$channel" != "stable" ]; then
+        log_info "Setting release track to $channel..."
+        if "$target_path" update --set-track "$channel" 2>/dev/null; then
+            log_info "Release track set successfully"
+        else
+            log_warn "Could not set release track automatically. You can set it manually later with: $BINARY_NAME update --set-track $channel"
+        fi
+        echo ""
+    fi
+
     # Check if install dir is in PATH
     if [[ ":$PATH:" != *":$install_dir:"* ]]; then
         log_warn "Installation directory is not in your PATH"
