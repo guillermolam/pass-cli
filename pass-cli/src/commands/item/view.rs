@@ -80,9 +80,15 @@ pub async fn run(client: PassClient, query: ViewItemQuery, output: OutputFormat)
                 println!("- ID: {}", item.item.id);
                 println!("- ShareID: {}", item.item.share_id);
                 println!("- Item ID: {}", item.item.id);
+                if !item.item.content.note.is_empty() {
+                    println!("- Note: {}", item.item.content.note);
+                }
                 println!("------");
-                println!("{:#?}", item.item.content);
-                println!("------");
+                let content = item.item.content.pretty_print();
+                if !content.is_empty() {
+                    println!("{}", content);
+                    println!("------");
+                }
                 if !item.attachments.is_empty() {
                     println!("- Attachments:");
                     for attachment in item.attachments {

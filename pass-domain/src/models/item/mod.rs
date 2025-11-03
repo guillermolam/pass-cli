@@ -87,6 +87,24 @@ impl ItemData {
             .map_err(|e| anyhow!("Error serializing item to proto: {}", e))
     }
 
+    pub fn pretty_print(&self) -> String {
+        let mut out = String::new();
+
+        let item_content = self.content.pretty_print();
+        if !item_content.is_empty() {
+            out.push_str(&item_content);
+        }
+
+        if !self.extra_fields.is_empty() {
+            out.push_str("\n\nExtra fields:\n");
+            for field in &self.extra_fields {
+                out.push_str(format!("  - {}: {:?}", field.name, field.content).as_str());
+            }
+        }
+
+        out
+    }
+
     pub fn deserialize(data: &[u8]) -> Result<Self> {
         let as_proto =
             item_v1::Item::parse_from_bytes(data).context("Error decoding Item from proto")?;
@@ -249,6 +267,21 @@ pub enum ItemContent {
     Custom(CustomItem),
 }
 
+impl ItemContent {
+    pub fn pretty_print(&self) -> String {
+        match self {
+            ItemContent::Note(v) => v.pretty_print(),
+            ItemContent::Login(v) => v.pretty_print(),
+            ItemContent::Alias(v) => v.pretty_print(),
+            ItemContent::CreditCard(v) => v.pretty_print(),
+            ItemContent::Identity(v) => v.pretty_print(),
+            ItemContent::SshKey(v) => v.pretty_print(),
+            ItemContent::Wifi(v) => v.pretty_print(),
+            ItemContent::Custom(v) => v.pretty_print(),
+        }
+    }
+}
+
 impl From<ItemContent> for item_v1::content::Content {
     fn from(value: ItemContent) -> Self {
         match value {
@@ -311,6 +344,12 @@ impl From<item_v1::Content> for ItemContent {
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
 pub struct NoteItem;
 
+impl NoteItem {
+    pub fn pretty_print(&self) -> String {
+        String::new()
+    }
+}
+
 impl From<NoteItem> for item_v1::ItemNote {
     fn from(_value: NoteItem) -> Self {
         item_v1::ItemNote::default()
@@ -330,6 +369,33 @@ pub struct LoginItem {
     pub password: String,
     pub urls: Vec<String>,
     pub totp_uri: String,
+}
+
+impl LoginItem {
+    pub fn pretty_print(&self) -> String {
+        let mut out = String::new();
+
+        if !self.email.is_empty() {
+            out.push_str(format!("\n - Email: {}", self.email).as_str());
+        }
+        if !self.username.is_empty() {
+            out.push_str(format!("\n - Username: {}", self.username).as_str());
+        }
+        if !self.password.is_empty() {
+            out.push_str(format!("\n - Password: {}", self.password).as_str());
+        }
+        if !self.totp_uri.is_empty() {
+            out.push_str(format!("\n - TOTP URI: {}", self.totp_uri).as_str());
+        }
+        if !self.urls.is_empty() {
+            out.push_str("\n - URLS");
+            for url in &self.urls {
+                out.push_str(format!("\n   - {}", url).as_str());
+            }
+        }
+
+        out
+    }
 }
 
 impl From<LoginItem> for item_v1::ItemLogin {
@@ -360,6 +426,12 @@ impl From<item_v1::ItemLogin> for LoginItem {
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
 pub struct AliasItem;
 
+impl AliasItem {
+    pub fn pretty_print(&self) -> String {
+        String::new()
+    }
+}
+
 impl From<AliasItem> for item_v1::ItemAlias {
     fn from(_value: AliasItem) -> Self {
         item_v1::ItemAlias::default()
@@ -380,6 +452,28 @@ pub struct CreditCardItem {
     pub verification_number: String,
     pub expiration_date: String,
     pub pin: String,
+}
+
+impl CreditCardItem {
+    pub fn pretty_print(&self) -> String {
+        let mut out = String::new();
+        if !self.cardholder_name.is_empty() {
+            out.push_str(format!("\n- Cardholder name: {}", self.cardholder_name).as_str());
+        }
+        if !self.number.is_empty() {
+            out.push_str(format!("\n- Number: {}", self.number).as_str());
+        }
+        if !self.verification_number.is_empty() {
+            out.push_str(format!("\n- Verification number: {}", self.verification_number).as_str());
+        }
+        if !self.expiration_date.is_empty() {
+            out.push_str(format!("\n- Expiration date: {}", self.expiration_date).as_str());
+        }
+        if !self.pin.is_empty() {
+            out.push_str(format!("\n- PIN: {}", self.pin).as_str());
+        }
+        out
+    }
 }
 
 impl From<CreditCardItem> for item_v1::ItemCreditCard {
@@ -431,6 +525,79 @@ pub struct IdentityItem {
     pub website: String,
     pub company: String,
     pub job_title: String,
+}
+
+impl IdentityItem {
+    pub fn pretty_print(&self) -> String {
+        let mut out = String::new();
+        if !self.full_name.is_empty() {
+            out.push_str(format!("\n- Full name: {}", self.full_name).as_str());
+        }
+        if !self.email.is_empty() {
+            out.push_str(format!("\n- Email: {}", self.email).as_str());
+        }
+        if !self.phone_number.is_empty() {
+            out.push_str(format!("\n- Phone number: {}", self.phone_number).as_str());
+        }
+        if !self.first_name.is_empty() {
+            out.push_str(format!("\n- First name: {}", self.first_name).as_str());
+        }
+        if !self.middle_name.is_empty() {
+            out.push_str(format!("\n- Middle name: {}", self.middle_name).as_str());
+        }
+        if !self.last_name.is_empty() {
+            out.push_str(format!("\n- Last name: {}", self.last_name).as_str());
+        }
+        if !self.birthdate.is_empty() {
+            out.push_str(format!("\n- Birthdate: {}", self.birthdate).as_str());
+        }
+        if !self.gender.is_empty() {
+            out.push_str(format!("\n- Gender: {}", self.gender).as_str());
+        }
+        if !self.organization.is_empty() {
+            out.push_str(format!("\n- Organization: {}", self.organization).as_str());
+        }
+        if !self.street_address.is_empty() {
+            out.push_str(format!("\n- Street address: {}", self.street_address).as_str());
+        }
+        if !self.zip_or_postal_code.is_empty() {
+            out.push_str(format!("\n- Zip or postal code: {}", self.zip_or_postal_code).as_str());
+        }
+        if !self.city.is_empty() {
+            out.push_str(format!("\n- City: {}", self.city).as_str());
+        }
+        if !self.state_or_province.is_empty() {
+            out.push_str(format!("\n- State or province: {}", self.state_or_province).as_str());
+        }
+        if !self.country_or_region.is_empty() {
+            out.push_str(format!("\n- Country or region: {}", self.country_or_region).as_str());
+        }
+        if !self.social_security_number.is_empty() {
+            out.push_str(
+                format!(
+                    "\n- Social security number: {}",
+                    self.social_security_number
+                )
+                .as_str(),
+            );
+        }
+        if !self.passport_number.is_empty() {
+            out.push_str(format!("\n- Passport number: {}", self.passport_number).as_str());
+        }
+        if !self.license_number.is_empty() {
+            out.push_str(format!("\n- License number: {}", self.license_number).as_str());
+        }
+        if !self.website.is_empty() {
+            out.push_str(format!("\n- Website: {}", self.website).as_str());
+        }
+        if !self.company.is_empty() {
+            out.push_str(format!("\n- Company: {}", self.company).as_str());
+        }
+        if !self.job_title.is_empty() {
+            out.push_str(format!("\n- Job title: {}", self.job_title).as_str());
+        }
+        out
+    }
 }
 
 impl From<IdentityItem> for item_v1::ItemIdentity {
@@ -494,6 +661,19 @@ pub struct SshKeyItem {
     pub public_key: String,
 }
 
+impl SshKeyItem {
+    pub fn pretty_print(&self) -> String {
+        let mut out = String::new();
+        if !self.public_key.is_empty() {
+            out.push_str(format!("\n- Public key: {}", self.public_key).as_str());
+        }
+        if !self.private_key.is_empty() {
+            out.push_str(format!("\n- Private key:\n{}", self.private_key).as_str());
+        }
+        out
+    }
+}
+
 impl From<SshKeyItem> for item_v1::ItemSSHKey {
     fn from(value: SshKeyItem) -> Self {
         item_v1::ItemSSHKey {
@@ -520,6 +700,22 @@ pub struct WifiItem {
     pub security: WifiSecurity,
 }
 
+impl WifiItem {
+    pub fn pretty_print(&self) -> String {
+        let mut out = String::new();
+        if !self.ssid.is_empty() {
+            out.push_str(format!("\n- SSID: {}", self.ssid).as_str());
+        }
+        if !self.password.is_empty() {
+            out.push_str(format!("\n- Password: {}", self.password).as_str());
+        }
+        if self.security != WifiSecurity::UnspecifiedWifiSecurity {
+            out.push_str(format!("\n- Wifi Security: {:?}", self.security).as_str());
+        }
+        out
+    }
+}
+
 impl From<WifiItem> for item_v1::ItemWifi {
     fn from(value: WifiItem) -> Self {
         item_v1::ItemWifi {
@@ -544,6 +740,23 @@ impl From<item_v1::ItemWifi> for WifiItem {
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
 pub struct CustomItem {
     pub sections: Vec<CustomSection>,
+}
+
+impl CustomItem {
+    pub fn pretty_print(&self) -> String {
+        let mut out = String::new();
+        if !self.sections.is_empty() {
+            for section in &self.sections {
+                out.push_str(format!("\n- Section: {}", section.section_name).as_str());
+                if !section.section_fields.is_empty() {
+                    for field in &section.section_fields {
+                        out.push_str(format!("\n  - {}: {:?}", field.name, field.content).as_str());
+                    }
+                }
+            }
+        }
+        out
+    }
 }
 
 impl From<CustomItem> for item_v1::ItemCustom {
