@@ -42,7 +42,9 @@ pub enum VaultCommands {
     #[command(about = "Share a vault with someone")]
     Share {
         #[arg(long, help = "Share ID of the vault to share")]
-        share_id: String,
+        share_id: Option<String>,
+        #[arg(long, help = "Name of the vault to share")]
+        vault_name: Option<String>,
         #[arg(help = "Email address to share with")]
         email: String,
         #[arg(long, default_value = "viewer")]
@@ -67,8 +69,12 @@ pub async fn run(subcommand: VaultCommands, client: PassClient) -> Result<()> {
         }
         VaultCommands::Share {
             share_id,
+            vault_name,
             email,
             role,
-        } => share::run(client, ShareId::new(share_id), email, role).await,
+        } => {
+            let query = share::ShareVaultQuery::new(share_id, vault_name)?;
+            share::run(client, query, email, role).await
+        }
     }
 }
