@@ -1,8 +1,37 @@
 use crate::commands::{OutputFormat, Role};
-use anyhow::Result;
+use anyhow::{Context, Result, anyhow};
 use clap::Subcommand;
 use pass::PassClient;
 use pass_domain::ShareId;
+
+pub enum VaultQuery {
+    ShareId(ShareId),
+    VaultName(String),
+}
+
+impl VaultQuery {
+    pub fn new(share_id: Option<String>, name: Option<String>) -> Result<Self> {
+        match (share_id, name) {
+            (Some(share_id), None) => Ok(Self::ShareId(ShareId::new(share_id))),
+            (None, Some(vault_name)) => Ok(Self::VaultName(vault_name)),
+
+            _ => Err(anyhow!("Please provide either share-id or vault name")),
+        }
+    }
+
+    pub async fn resolve(&self, client: &PassClient) -> Result<ShareId> {
+        match self {
+            VaultQuery::ShareId(id) => Ok(id.clone()),
+            VaultQuery::VaultName(vault) => {
+                let vault = client
+                    .find_vault(vault)
+                    .await
+                    .context("Error finding vault")?;
+                Ok(vault.share_id)
+            }
+        }
+    }
+}
 
 pub mod create;
 pub mod delete;
@@ -64,7 +93,7 @@ pub async fn run(subcommand: VaultCommands, client: PassClient) -> Result<()> {
             share_id,
             vault_name,
         } => {
-            let query = delete::DeleteVaultQuery::new(share_id, vault_name)?;
+            let query = VaultQuery::new(share_id, vault_name)?;
             delete::run(client, query).await
         }
         VaultCommands::Share {
@@ -73,7 +102,7 @@ pub async fn run(subcommand: VaultCommands, client: PassClient) -> Result<()> {
             email,
             role,
         } => {
-            let query = share::ShareVaultQuery::new(share_id, vault_name)?;
+            let query = VaultQuery::new(share_id, vault_name)?;
             share::run(client, query, email, role).await
         }
     }
