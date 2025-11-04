@@ -5,7 +5,8 @@ This document provides a practical guide to using the Proton Pass CLI for managi
 ## Overview
 
 The CLI operates on a hierarchical data model:
-```
+
+```text
 Account
 └── Share (representing either Vaults or Items shared with you)
     └── Items (logins, notes, passwords, etc.)
@@ -27,6 +28,7 @@ pass-cli vault list
 ```
 
 Output shows:
+
 - Vault name
 - Share ID (needed for other operations)
 - Item count
@@ -39,7 +41,8 @@ pass-cli vault create "Work Passwords"
 ```
 
 This creates a new vault and returns its share ID:
-```
+
+```text
 Created vault with id: AbCdEf123456
 ```
 
@@ -83,6 +86,7 @@ Then, after you know which type of item you want to create, you can run `--help`
 As an example, let's see a few ways for creating a new login item:
 
 **Basic creation:**
+
 ```bash
 pass-cli item create login \
   --share-id AbCdEf123456 \
@@ -93,6 +97,7 @@ pass-cli item create login \
 ```
 
 **Generate a random password:**
+
 ```bash
 pass-cli item create login \
   --share-id AbCdEf123456 \
@@ -102,6 +107,7 @@ pass-cli item create login \
 ```
 
 **Generate password with custom settings:**
+
 ```bash
 pass-cli item create login \
   --share-id AbCdEf123456 \
@@ -127,11 +133,13 @@ This generates a passphrase with 5 words.
 ### Create from template
 
 Get the JSON template:
+
 ```bash
 pass-cli item create login --get-template
 ```
 
 Output:
+
 ```json
 {
   "title": "",
@@ -143,6 +151,7 @@ Output:
 ```
 
 Create from template file:
+
 ```bash
 cat > login.json << EOF
 {
@@ -159,6 +168,7 @@ pass-cli item create login \
 ```
 
 Or from stdin:
+
 ```bash
 echo '{"title":"Test","username":"user","password":"pass","urls":[]}' | \
   pass-cli item create login \
@@ -204,12 +214,13 @@ pass-cli item delete --share-id AbCdEf123456 --item-id XyZ789
 
 The CLI uses a URL-like syntax to reference secrets stored in Pass:
 
-```
+```text
 pass://<vault-name-or-id>/<item-name-or-id>/<field-name>
 ```
 
 Examples:
-```
+
+```text
 pass://Work/GitHub/password
 pass://Personal/Email Login/username
 pass://AbCdEf123456/XyZ789/password
@@ -217,6 +228,7 @@ pass://My Vault/My Item/My Custom Field
 ```
 
 **Notes:**
+
 - Vault and item can be referenced by name or ID
 - Names with spaces are supported
 - Field name must match exactly (case-sensitive)
@@ -260,6 +272,7 @@ EOF
 ```
 
 Run with the env file:
+
 ```bash
 pass-cli run --env-file .env -- ./my-app
 ```
@@ -284,7 +297,7 @@ pass-cli run -- ./my-app
 
 If the application logs `API_KEY: sk_live_abc123`, the output shows:
 
-```
+```text
 API_KEY: <concealed by Proton Pass>
 ```
 
@@ -297,6 +310,7 @@ pass-cli run --no-masking -- ./my-app
 ### Running with arguments
 
 Pass arguments to your application:
+
 ```bash
 pass-cli run -- ./my-app --config production --verbose
 ```
@@ -320,11 +334,13 @@ The `inject` command processes template files and replaces secret references wit
 ### Template syntax
 
 Use double braces to mark secret references:
-```
+
+```text
 {{ pass://vault/item/field }}
 ```
 
 Create a template file:
+
 ```yaml
 # config.yaml.template
 database:
@@ -373,6 +389,7 @@ cat template.txt | pass-cli inject
 ```
 
 Or with heredoc:
+
 ```bash
 pass-cli inject << EOF
 {
@@ -393,9 +410,9 @@ Proton Pass allows you to generate new SSH keys, but it can also import and secu
 If you are generating new SSH keys, there's no need to protect them with a passphrase, as they are already encrypted and securely stored within your Proton Pass vault.
 However, if you are importing your already-existing SSH keys, probably they are using a passphrase for security reasons. If you want to import your passphrase-protected SSH keys, you can either:
 
-* Create a copy of your unlocked private SSH key and import it into Proton Pass. For removing the passphrase of a SSH key you can use `ssh-keygen -p -f PATH_TO_YOUR_PRIVATE_KEY -N ""` (it will prompt your for your passphrase).
-* Import your passphrase-protected private SSH key into Proton Pass and also create a custom field of type Hidden containing the passphrase. You can name it `Password` or `Passphrase`, but if you save it with any other name, Proton Pass CLI will try to use all the available `Hidden` custom fields to open it.
-  
+- Create a copy of your unlocked private SSH key and import it into Proton Pass. For removing the passphrase of a SSH key you can use `ssh-keygen -p -f PATH_TO_YOUR_PRIVATE_KEY -N ""` (it will prompt your for your passphrase).
+- Import your passphrase-protected private SSH key into Proton Pass and also create a custom field of type Hidden containing the passphrase. You can name it `Password` or `Passphrase`, but if you save it with any other name, Proton Pass CLI will try to use all the available `Hidden` custom fields to open it.
+
 An SSH agent is a small background program that safely holds your SSH keys in memory so you don’t have to type your passphrase every time you connect to a server.
 
 When you use `ssh` to connect somewhere, the agent's job is to:
@@ -418,7 +435,7 @@ eval $(ssh-agent)
 
 ### SSH-Agent integration
 
-Proton Pass CLI can load your SSH keys into your existing SSH agent. 
+Proton Pass CLI can load your SSH keys into your existing SSH agent.
 
 For doing so, make sure the `SSH_AUTH_SOCK` environment variable is defined. If it is, you can load your SSH keys into the agent by running the following command:
 
@@ -464,7 +481,7 @@ pass-cli ssh-agent start --vault-name MySshKeysVault
 
 After it's started, you will see an output like this one:
 
-```
+```text
 SSH agent started successfully!
 To use this agent, run:
   export SSH_AUTH_SOCK=/Users/youruser/.ssh/proton-pass-agent.sock
@@ -476,7 +493,7 @@ Press Ctrl+C to stop the agent.
 
 When the SSH agent starts, it will create a unix socket in the default location, which is `$HOME/.ssh/proton-pass-agent.sock`. You can specify a custom location by passing the `--socket-path` flag:
 
-```
+```text
 pass-cli ssh-agent start --socket-path MY_CUSTOM_SOCKET_PATH
 ```
 
@@ -488,6 +505,6 @@ pass-cli ssh-agent start --refresh-interval 7200 # Every 2 hours, 7200 seconds
 
 In order to use the ssh-agent, you need to run the `export` command that appears on screen, in the case of the example:
 
-```
+```text
 export SSH_AUTH_SOCK=/Users/youruser/.ssh/proton-pass-agent.sock
 ```

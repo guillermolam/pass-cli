@@ -86,7 +86,7 @@ If you have a hardware security key (YubiKey, etc.), the CLI will detect it and 
 
 If both TOTP and FIDO2 are available, you'll be presented with a choice:
 
-```
+```text
 Multiple 2FA methods available:
 1) TOTP
 2) FIDO
@@ -130,6 +130,7 @@ pass-cli info
 ```
 
 This shows:
+
 - Your username
 - Account details
 - Active session information
@@ -173,5 +174,4 @@ export PROTON_PASS_EXTRA_PASSWORD_FILE='/secure/creds/extra-password.txt'
 
 pass-cli login user@proton.me
 ```
-
 

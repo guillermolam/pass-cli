@@ -18,6 +18,7 @@ Take into account that CLI logs are sent to `stderr`, so they should not interfe
 ## Session storage directory
 
 By default, session data is stored in:
+
 - **macOS**: `~/Library/Application Support/proton-pass-cli/.session/`
 - **Linux**: `~/.local/share/proton-pass-cli/.session/`
 
@@ -46,6 +47,7 @@ This uses the operating system's secure credential storage:
 - **Windows**: Windows Credential Manager
 
 **How it works:**
+
 1. On first run, generate a random 256-bit key
 2. Store it in the system keyring
 3. On subsequent runs, retrieve it from the keyring
@@ -73,7 +75,7 @@ export PASS_CLI_KEY_PROVIDER=fs
 
 This stores the encryption key in a file on disk:
 
-```
+```text
 <session-dir>/local.key
 ```
 
