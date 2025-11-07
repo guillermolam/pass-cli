@@ -105,6 +105,11 @@ enum Commands {
         #[command(subcommand)]
         command: commands::password::PasswordCommands,
     },
+    #[command(about = "TOTP operations")]
+    Totp {
+        #[command(subcommand)]
+        command: commands::totp::TotpCommands,
+    },
     #[command(about = "Share operations")]
     Share {
         #[command(subcommand)]
@@ -182,6 +187,9 @@ async fn main() -> Result<()> {
         }
         Commands::Password { command } => {
             return commands::password::run(command).await;
+        }
+        Commands::Totp { command } => {
+            return commands::totp::run(command).await;
         }
         Commands::Update { yes, set_track } => {
             return commands::update::run(*yes, set_track.clone(), base_dir.clone()).await;
