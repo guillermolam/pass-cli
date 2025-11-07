@@ -6,6 +6,6 @@ pub async fn run(client: PassClient) -> Result<()> {
         .ping()
         .await
         .context("Error performing connection test")?;
-    info!("Connection successful");
+    println!("Connection successful");
     Ok(())
 }

@@ -25,7 +25,13 @@ async fn remove_local_data() -> Result<()> {
 }
 
 pub async fn run(client: PassClient) -> Result<()> {
-    client.logout().await.context("Error logging out")?;
+    if let Err(e) = client.logout().await {
+        eprintln!("Error logging out: {}", e);
+        eprintln!(
+            "There has been an error during the logout process. If it persists, you may run 'pass-cli logout --force'"
+        );
+        std::process::exit(1);
+    }
 
     let key_provider = client
         .get_key_provider()
