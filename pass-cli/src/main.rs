@@ -208,7 +208,8 @@ async fn main() -> Result<()> {
             };
         }
         Some(ref session) => {
-            if !session.is_authenticated().await {
+            if !session.is_logged_in().await {
+                commands::logout::cleanup().await?;
                 return Err(anyhow!("This operation requires an authenticated client"));
             }
         }

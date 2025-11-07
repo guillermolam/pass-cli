@@ -48,7 +48,12 @@ pub async fn run(client: PassClient) -> Result<()> {
 
 pub async fn force_logout() -> Result<()> {
     println!("Executing force logout");
+    cleanup().await?;
+    println!("Successfully performed force logout");
+    Ok(())
+}
 
+pub async fn cleanup() -> Result<()> {
     let base_dir = get_base_dir().context("Error getting base dir")?;
     let client_features =
         CliClientFeatures::new(base_dir).context("Error creating client features")?;
@@ -57,6 +62,5 @@ pub async fn force_logout() -> Result<()> {
     }
 
     remove_local_data().await?;
-    println!("Successfully performed force logout");
     Ok(())
 }
