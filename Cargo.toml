@@ -9,7 +9,7 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-muon = { version = "1.8.0", registry = "proton", features = ["tls-tokio-rustls", "unsealed", "util", "testing-runner", "testing-server", "other-platform"] }
+muon = { git = "ssh://git@gitlab.protontech.ch/ProtonVPN/rust/muon.git", rev = "8911035bdbaf0a41d0be4bce915c006ca2a28687", features = ["tls-tokio-rustls", "unsealed", "util", "testing-runner", "testing-server", "other-platform"] }
 
 # Rust crypto
 # proton-crypto = { git = "ssh://git@gitlab.protontech.ch/rust/proton-crypto-rs.git", rev = "95305a122068d6db8aa2d2835c10687b9c507c07" }
