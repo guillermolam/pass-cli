@@ -1,4 +1,5 @@
 use crate::commands::OutputFormat;
+use crate::utils::is_experimental_features_disabled;
 use anyhow::Result;
 use clap::Subcommand;
 use pass::PassClient;
@@ -26,7 +27,10 @@ pub enum InviteCommands {
         #[arg(help = "ID of the invite to reject")]
         invite_id: String,
     },
-    #[command(about = "Operations to perform on group invites")]
+    #[command(
+        about = "Operations to perform on group invites",
+        hide = is_experimental_features_disabled()
+    )]
     Group {
         #[command(subcommand)]
         command: group::GroupInviteCommands,

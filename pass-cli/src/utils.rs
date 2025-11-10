@@ -3,6 +3,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 const PROTON_PASS_SESSION_DIR_ENV: &str = "PROTON_PASS_SESSION_DIR";
+const PROTON_PASS_EXPERIMENTAL_FEATURES_ENV: &str = "PROTON_PASS_EXPERIMENTAL_FEATURES";
 
 pub fn ask_for_input(prompt: &str, secure: bool) -> anyhow::Result<String> {
     if secure {
@@ -49,4 +50,10 @@ pub fn get_base_dir() -> anyhow::Result<PathBuf> {
     let session_dir_absolute =
         std::fs::canonicalize(&session_dir).context("Error getting absolute path")?;
     Ok(session_dir_absolute)
+}
+
+pub fn is_experimental_features_disabled() -> bool {
+    std::env::var(PROTON_PASS_EXPERIMENTAL_FEATURES_ENV)
+        .map(|v| v != "on")
+        .unwrap_or(true)
 }
