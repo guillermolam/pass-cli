@@ -12,3 +12,4 @@ mod open;
 #[allow(dead_code)]
 mod revisions;
 mod share;
+mod trash;

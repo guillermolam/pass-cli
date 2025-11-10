@@ -1,18 +1,8 @@
 use crate::commands::OutputFormat;
+use crate::commands::item::common::{ItemQuery, ShareQuery};
 use crate::commands::secret_resolver::ItemReference;
 use anyhow::{Context, Result, anyhow, bail};
 use pass::{FindItemQuery, PassClient};
-use pass_domain::{ItemId, ShareId};
-
-pub(crate) enum ShareQuery {
-    ShareId(ShareId),
-    VaultName(String),
-}
-
-pub(crate) enum ItemQuery {
-    ItemId(ItemId),
-    ItemTitle(String),
-}
 
 pub enum ViewItemQuery {
     Ids {
@@ -46,30 +36,8 @@ impl ViewItemQuery {
             return Ok(Self::Uri(uri_value));
         }
 
-        // Otherwise, we need exactly one share identifier and one item identifier
-        let share_query = match (share_id, vault_name) {
-            (Some(share_id), None) => ShareQuery::ShareId(ShareId::new(share_id)),
-            (None, Some(vault_name)) => ShareQuery::VaultName(vault_name),
-            (None, None) => {
-                return Err(anyhow!("Please provide either --share-id or --vault-name"));
-            }
-            (Some(_), Some(_)) => {
-                return Err(anyhow!(
-                    "Please provide either --share-id or --vault-name, not both"
-                ));
-            }
-        };
-
-        let item_query = match (item_id, item_title) {
-            (Some(item_id), None) => ItemQuery::ItemId(ItemId::new(item_id)),
-            (None, Some(item_title)) => ItemQuery::ItemTitle(item_title),
-            (None, None) => return Err(anyhow!("Please provide either --item-id or --item-title")),
-            (Some(_), Some(_)) => {
-                return Err(anyhow!(
-                    "Please provide either --item-id or --item-title, not both"
-                ));
-            }
-        };
+        let share_query = ShareQuery::new(share_id, vault_name)?;
+        let item_query = ItemQuery::new(item_id, item_title)?;
 
         Ok(Self::Ids {
             share_query,
@@ -86,36 +54,8 @@ pub async fn run(client: PassClient, query: ViewItemQuery, output: OutputFormat)
             item_query,
             field,
         } => {
-            // First, resolve the share_id
-            let share_id = match share_query {
-                ShareQuery::ShareId(id) => id,
-                ShareQuery::VaultName(vault_name) => {
-                    let vault = client
-                        .find_vault(&vault_name)
-                        .await
-                        .context("Error finding vault")?;
-                    vault.share_id
-                }
-            };
-
-            // Then, resolve the item_id
-            let item_id = match item_query {
-                ItemQuery::ItemId(id) => id,
-                ItemQuery::ItemTitle(title) => {
-                    let items = client
-                        .list_items(&share_id)
-                        .await
-                        .context("Error listing items")?;
-
-                    let matching_item = items
-                        .iter()
-                        .find(|item| item.content.title == title)
-                        .ok_or_else(|| anyhow!("No item found with title: {}", title))?;
-
-                    matching_item.id.clone()
-                }
-            };
-
+            let share_id = share_query.share_id(&client).await?;
+            let item_id = item_query.item_id(&share_id, &client).await?;
             let item = client
                 .view_item(&share_id, &item_id)
                 .await

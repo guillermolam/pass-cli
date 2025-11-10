@@ -1,5 +1,5 @@
 use crate::commands::OutputFormat;
-use crate::commands::item::view::{ItemQuery, ShareQuery};
+use crate::commands::item::common::{ItemQuery, ShareQuery};
 use crate::commands::secret_resolver::ItemReference;
 use anyhow::{Context, Result, anyhow, bail};
 use chrono::Utc;

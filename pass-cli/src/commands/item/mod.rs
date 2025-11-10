@@ -7,6 +7,7 @@ use pass_domain::{ItemId, ShareId};
 
 pub mod alias;
 pub mod attachment;
+mod common;
 pub mod create;
 pub mod delete;
 pub mod list;
@@ -14,6 +15,8 @@ pub mod member;
 pub mod r#move;
 pub mod share;
 pub mod totp;
+pub mod trash;
+pub mod untrash;
 pub mod view;
 
 #[derive(Subcommand)]
@@ -123,6 +126,28 @@ pub enum ItemCommands {
         #[arg(long, default_value = "human")]
         output: OutputFormat,
     },
+    #[command(about = "Move an item to trash")]
+    Trash {
+        #[arg(long, help = "Share ID of the vault containing the item")]
+        share_id: Option<String>,
+        #[arg(long, help = "Name of the vault containing the item")]
+        vault_name: Option<String>,
+        #[arg(long, help = "ID of the item to trash")]
+        item_id: Option<String>,
+        #[arg(long, help = "Title of the item to trash")]
+        item_title: Option<String>,
+    },
+    #[command(about = "Restore an item from trash")]
+    Untrash {
+        #[arg(long, help = "Share ID of the vault containing the item")]
+        share_id: Option<String>,
+        #[arg(long, help = "Name of the vault containing the item")]
+        vault_name: Option<String>,
+        #[arg(long, help = "ID of the item to restore")]
+        item_id: Option<String>,
+        #[arg(long, help = "Title of the item to restore")]
+        item_title: Option<String>,
+    },
 }
 
 pub async fn run(subcommand: ItemCommands, client: PassClient) -> Result<()> {
@@ -205,6 +230,24 @@ pub async fn run(subcommand: ItemCommands, client: PassClient) -> Result<()> {
             let query =
                 totp::ViewTotpQuery::new(share_id, vault_name, item_id, item_title, field, uri)?;
             totp::run(client, query, output).await
+        }
+        ItemCommands::Trash {
+            share_id,
+            vault_name,
+            item_id,
+            item_title,
+        } => {
+            let query = trash::TrashItemQuery::new(share_id, vault_name, item_id, item_title)?;
+            trash::run(client, query).await
+        }
+        ItemCommands::Untrash {
+            share_id,
+            vault_name,
+            item_id,
+            item_title,
+        } => {
+            let query = untrash::UntrashItemQuery::new(share_id, vault_name, item_id, item_title)?;
+            untrash::run(client, query).await
         }
     }
 }
