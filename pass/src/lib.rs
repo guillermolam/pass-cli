@@ -26,6 +26,7 @@ pub mod password;
 mod permission;
 mod ping;
 mod share;
+mod telemetry;
 mod user;
 mod user_keys;
 mod utils;

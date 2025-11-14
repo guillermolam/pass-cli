@@ -3,7 +3,7 @@ use crate::permission::PermissionAction;
 use crate::utils::debug_response;
 use anyhow::{Context, Result, anyhow};
 use muon::DELETE;
-use pass_domain::{ItemId, ShareId};
+use pass_domain::{ItemId, ItemType, ShareId, TelemetryEvent};
 
 #[derive(Debug, serde::Serialize)]
 struct DeleteItemsRequest {
@@ -54,6 +54,13 @@ impl PassClient {
 
         // Clear the items cache for this share since we've deleted an item
         self.clear_items_cache(share_id).await;
+
+        // TODO: Fetch the item to determine item type. We are not doing it now so use Note as placeholder
+        self.emit_telemetry(TelemetryEvent::ItemDeleted {
+            item_type: ItemType::Note,
+        })
+        .await;
+
         Ok(())
     }
 }

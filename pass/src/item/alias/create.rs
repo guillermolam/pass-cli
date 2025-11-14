@@ -3,7 +3,7 @@ use crate::item::create::common::{CreateItemRequest, CreateItemResponse};
 use crate::permission::PermissionAction;
 use anyhow::{Context, Result, anyhow};
 use muon::POST;
-use pass_domain::{AliasItem, ItemContent, ItemId, ShareId};
+use pass_domain::{AliasItem, ItemContent, ItemId, ItemType, ShareId, TelemetryEvent};
 
 #[derive(Debug)]
 pub struct CreatedAliasItem {
@@ -49,9 +49,17 @@ impl PassClient {
             Some(email) => email,
             None => return Err(anyhow!("Error getting email from created alias")),
         };
+
+        let item_id = ItemId::new(response.item.item_id);
+
+        self.emit_telemetry(TelemetryEvent::ItemCreated {
+            item_type: ItemType::Alias,
+        })
+        .await;
+
         Ok(CreatedAliasItem {
             alias: email,
-            item_id: ItemId::new(response.item.item_id),
+            item_id,
         })
     }
 

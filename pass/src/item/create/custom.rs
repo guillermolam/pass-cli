@@ -2,7 +2,8 @@ use crate::PassClient;
 use crate::permission::PermissionAction;
 use anyhow::{Context, Result, bail};
 use pass_domain::{
-    CustomItem, CustomSection, ItemContent, ItemExtraField, ItemExtraFieldContent, ItemId, ShareId,
+    CustomItem, CustomSection, ItemContent, ItemExtraField, ItemExtraFieldContent, ItemId,
+    ItemType, ShareId, TelemetryEvent,
 };
 
 #[derive(Clone, Debug)]
@@ -132,7 +133,14 @@ impl PassClient {
             .await
             .context("Error creating custom item request")?;
 
-        self.send_create_item_request(share_id, req).await
+        let item_id = self.send_create_item_request(share_id, req).await?;
+
+        self.emit_telemetry(TelemetryEvent::ItemCreated {
+            item_type: ItemType::Custom,
+        })
+        .await;
+
+        Ok(item_id)
     }
 }
 

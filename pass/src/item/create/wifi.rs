@@ -1,7 +1,7 @@
 use crate::PassClient;
 use crate::permission::PermissionAction;
 use anyhow::{Context, Result, bail};
-use pass_domain::{ItemContent, ItemId, ShareId, WifiItem, WifiSecurity};
+use pass_domain::{ItemContent, ItemId, ItemType, ShareId, TelemetryEvent, WifiItem, WifiSecurity};
 
 #[derive(Clone, Debug)]
 pub struct WifiItemCreatePayload {
@@ -56,7 +56,14 @@ impl PassClient {
             .await
             .context("Error creating wifi item request")?;
 
-        self.send_create_item_request(share_id, req).await
+        let item_id = self.send_create_item_request(share_id, req).await?;
+
+        self.emit_telemetry(TelemetryEvent::ItemCreated {
+            item_type: ItemType::Wifi,
+        })
+        .await;
+
+        Ok(item_id)
     }
 }
 

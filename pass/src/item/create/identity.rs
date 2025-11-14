@@ -1,7 +1,7 @@
 use crate::PassClient;
 use crate::permission::PermissionAction;
 use anyhow::{Context, Result};
-use pass_domain::{IdentityItem, ItemContent, ItemId, ShareId};
+use pass_domain::{IdentityItem, ItemContent, ItemId, ItemType, ShareId, TelemetryEvent};
 
 #[derive(Clone, Debug)]
 pub struct IdentityItemCreatePayload {
@@ -78,7 +78,14 @@ impl PassClient {
             .await
             .context("Error creating identity item request")?;
 
-        self.send_create_item_request(share_id, req).await
+        let item_id = self.send_create_item_request(share_id, req).await?;
+
+        self.emit_telemetry(TelemetryEvent::ItemCreated {
+            item_type: ItemType::Identity,
+        })
+        .await;
+
+        Ok(item_id)
     }
 }
 

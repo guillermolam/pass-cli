@@ -3,7 +3,7 @@ use crate::permission::PermissionAction;
 use crate::utils::debug_response;
 use anyhow::{Context, Result, anyhow};
 use muon::DELETE;
-use pass_domain::ShareId;
+use pass_domain::{ShareId, TelemetryEvent};
 
 impl PassClient {
     pub async fn delete_vault(&self, share_id: &ShareId) -> Result<()> {
@@ -22,6 +22,9 @@ impl PassClient {
         }
 
         self.clear_shares_cache().await;
+
+        self.emit_telemetry(TelemetryEvent::VaultDeleted).await;
+
         Ok(())
     }
 }

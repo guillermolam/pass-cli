@@ -1,7 +1,8 @@
 use crate::PassClient;
 use anyhow::{Context, Result};
 use pass_domain::{
-    ItemContent, ItemData, ItemExtraField, ItemExtraFieldContent, ItemId, ShareId, SshKeyItem,
+    ItemContent, ItemData, ItemExtraField, ItemExtraFieldContent, ItemId, ItemType, ShareId,
+    SshKeyItem, TelemetryEvent,
 };
 
 #[derive(Clone, Debug)]
@@ -44,9 +45,17 @@ impl PassClient {
             .await
             .context("Error creating item request")?;
 
-        self.send_create_item_request(share_id, req)
+        let item_id = self
+            .send_create_item_request(share_id, req)
             .await
-            .context("Error sending create item request")
+            .context("Error sending create item request")?;
+
+        self.emit_telemetry(TelemetryEvent::ItemCreated {
+            item_type: ItemType::SshKey,
+        })
+        .await;
+
+        Ok(item_id)
     }
 }
 

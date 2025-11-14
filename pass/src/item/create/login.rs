@@ -1,6 +1,6 @@
 use crate::PassClient;
 use anyhow::{Context, Result};
-use pass_domain::{ItemContent, ItemId, LoginItem, ShareId};
+use pass_domain::{ItemContent, ItemId, ItemType, LoginItem, ShareId, TelemetryEvent};
 
 #[derive(Clone, Debug)]
 pub struct LoginItemCreatePayload {
@@ -33,7 +33,14 @@ impl PassClient {
             .await
             .context("Error creating login item request")?;
 
-        self.send_create_item_request(share_id, req).await
+        let item_id = self.send_create_item_request(share_id, req).await?;
+
+        self.emit_telemetry(TelemetryEvent::ItemCreated {
+            item_type: ItemType::Login,
+        })
+        .await;
+
+        Ok(item_id)
     }
 }
 

@@ -43,4 +43,8 @@ impl PassClient {
             .await
             .context("Error getting client session")
     }
+
+    pub fn get_client_features(&self) -> Arc<dyn ClientFeatures> {
+        self.client_features.clone()
+    }
 }
