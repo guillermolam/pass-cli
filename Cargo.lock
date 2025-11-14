@@ -3237,6 +3237,7 @@ dependencies = [
  "deadpool",
  "pass-domain",
  "rusqlite",
+ "tempfile",
  "tokio",
  "tracing",
 ]

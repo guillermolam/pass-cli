@@ -47,17 +47,18 @@ impl DatabaseManager {
     }
 
     #[cfg(test)]
-    pub async fn new_in_memory(encryption_key: LocalKey) -> Result<Self> {
+    pub async fn new_test_db(encryption_key: LocalKey) -> Result<Self> {
         // Use a temporary file for SQLCipher since :memory: doesn't work well with connection pools
-        use std::sync::atomic::{AtomicU64, Ordering};
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let count = COUNTER.fetch_add(1, Ordering::SeqCst);
-        let temp_path = format!("/tmp/pass-cli-test-{}-{}.db", std::process::id(), count);
+        // Use keep so it's not cleaned up, as we'll need it to exist to run the tess
+        let dir = tempfile::tempdir()
+            .context("Failed to create temporary directory")?
+            .keep();
 
-        // Clean up the file if it exists
-        let _ = std::fs::remove_file(&temp_path);
+        let db_path = dir.join("pass-cli.db");
 
-        Self::new_with_path(temp_path, encryption_key).await
+        // Make extra-sure that the DB does not exist before we initialize it
+        let _ = std::fs::remove_file(&db_path);
+        Self::new_with_path(db_path.display().to_string(), encryption_key).await
     }
 
     pub async fn get_connection(&self) -> Result<DbConnection> {

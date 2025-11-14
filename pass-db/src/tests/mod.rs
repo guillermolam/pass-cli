@@ -12,5 +12,5 @@ pub async fn create_test_db() -> Result<DatabaseManager> {
 }
 
 pub async fn create_test_db_with_key(encryption_key: LocalKey) -> Result<DatabaseManager> {
-    DatabaseManager::new_in_memory(encryption_key).await
+    DatabaseManager::new_test_db(encryption_key).await
 }
