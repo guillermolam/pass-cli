@@ -245,8 +245,15 @@ async fn main() -> Result<()> {
         }
     };
 
-    client_features.telemetry_handler.set_user_id(user_id).await;
-    let client = PassClient::new(client, client_features);
+    client_features
+        .telemetry_handler
+        .set_user_id(user_id.clone())
+        .await;
+    let client = PassClient::new(client, client_features.clone());
+    client_features
+        .telemetry_handler
+        .send_telemetry_if_needed(user_id, &client)
+        .await;
 
     match cli.command {
         Commands::Logout { .. } => commands::logout::run(client).await,
@@ -270,7 +277,9 @@ async fn main() -> Result<()> {
         Commands::User { command } => commands::user::run(command, client).await,
         Commands::SshAgent { command } => commands::ssh_agent::run(command, client).await,
         #[cfg(feature = "internal")]
-        Commands::Internal { command } => commands::internal::run(command, client).await,
+        Commands::Internal { command } => {
+            commands::internal::run(command, client, client_features).await
+        }
         _ => Ok(()),
     }
 }
