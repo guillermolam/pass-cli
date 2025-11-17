@@ -1,7 +1,6 @@
 use clap::ValueEnum;
 use pass_domain::ShareRole;
 
-pub mod support;
 pub mod info;
 pub mod inject;
 #[cfg(feature = "internal")]
@@ -14,8 +13,9 @@ pub mod logout;
 pub mod password;
 pub mod run;
 pub mod secret_resolver;
-pub mod share;
 pub mod ssh_agent;
+pub mod support;
+pub mod share;
 pub mod test;
 pub mod totp;
 pub mod update;
