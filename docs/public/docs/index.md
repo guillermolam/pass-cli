@@ -24,12 +24,6 @@ The Proton Pass CLI allows you to:
 
 ## Key Features
 
-### Secure Authentication
-
-- Support for password, TOTP, and FIDO2/WebAuthn authentication
-- Flexible credential input via environment variables, files, or interactive prompts
-- Secure session management
-
 ### Flexible Secret Management
 
 - Reference secrets using a simple URI syntax: `pass://vault/item/field`
@@ -50,6 +44,4 @@ The Proton Pass CLI allows you to:
 
 ## Need Help?
 
-If you encounter any issues or have questions:
-
-- Contact [support](https://proton.me/support/contact)
+If you encounter any issues or have questions, please [contact us](https://proton.me/support/contact)
