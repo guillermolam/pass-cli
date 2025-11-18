@@ -15,6 +15,7 @@ pass://<vault-identifier>/<item-identifier>/<field-name>
 ```
 
 Where:
+
 - **`vault-identifier`**: The vault's Share ID or name
 - **`item-identifier`**: The item's ID or title
 - **`field-name`**: The specific field to retrieve (e.g., `password`, `username`, `email`, `url`, `note`, or custom field names)
@@ -45,18 +46,21 @@ pass://My Vault/My Item/My Custom Field
 You can reference vaults and items by either their names or IDs:
 
 **By name:**
+
 ```text
 pass://Work/GitHub Account/password
 pass://Personal/Email Login/username
 ```
 
 **By ID:**
+
 ```text
 pass://AbCdEf123456/XyZ789/password
 pass://ShareId123/ItemId456/api_key
 ```
 
 **Mixed:**
+
 ```text
 pass://Work/XyZ789/password          # Vault by name, item by ID
 pass://AbCdEf123456/GitHub/password  # Vault by ID, item by name
@@ -67,6 +71,7 @@ pass://AbCdEf123456/GitHub/password  # Vault by ID, item by name
 ### Common fields
 
 For login items, common fields include:
+
 - `username` - The username/login name
 - `password` - The password
 - `email` - Email address
@@ -134,6 +139,7 @@ database:
 ```
 
 After injection:
+
 ```yaml
 database:
   password: actual_secret_value_here
@@ -148,16 +154,19 @@ database:
 If a reference cannot be resolved:
 
 1. **Check vault access**: Verify you have access to the vault
+
    ```bash
    pass-cli vault list
    ```
 
 2. **Check item exists**: Verify the item exists in the vault
+
    ```bash
    pass-cli item list --share-id <vault-share-id>
    ```
 
 3. **Verify field name**: Check the exact field name (case-sensitive)
+
    ```bash
    pass-cli item view --share-id <share-id> --item-id <item-id>
    ```
@@ -167,14 +176,17 @@ If a reference cannot be resolved:
 ### Common errors
 
 **"Invalid reference format"**
+
 - Ensure the reference follows `pass://vault/item/field` format
 - Check for trailing slashes
 - Verify all three components are present
 
 **"Secret reference requires a field name"**
+
 - Add the field name: `pass://vault/item/field` (not `pass://vault/item`)
 
 **"Field not found"**
+
 - Verify the field exists in the item
 - Check the field name is spelled correctly (case-sensitive)
 - Use `pass-cli item view` to see available fields

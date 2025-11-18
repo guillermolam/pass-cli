@@ -34,6 +34,7 @@ The `run` command executes external commands or scripts while providing secrets 
 ## Mutually exclusive options
 
 There are no mutually exclusive options. All options can be used together:
+
 - Multiple `--env-file` options can be specified
 - `--no-masking` can be combined with `--env-file` options
 
@@ -60,7 +61,8 @@ DATABASE_URL="postgresql://user:pass://vault/db/password@localhost/db"
 API_ENDPOINT="https://api.example.com?key=pass://vault/api/key"
 ```
 
-**Important**: 
+**Important**:
+
 - The `pass://` URI must appear directly in the environment variable value
 - It will be replaced with the actual secret value before the command runs
 - Multiple references in the same value are all resolved
@@ -69,11 +71,13 @@ API_ENDPOINT="https://api.example.com?key=pass://vault/api/key"
 ### Reference format
 
 Secret references follow this format:
-```
+
+```text
 pass://<vault-identifier>/<item-identifier>/<field-name>
 ```
 
 Where:
+
 - **vault-identifier**: Vault Share ID or vault name
 - **item-identifier**: Item ID or item title  
 - **field-name**: Field name (e.g., `password`, `username`, `api_key`)
@@ -207,6 +211,7 @@ pass-cli run \
 ### Secret not found
 
 If a `pass://` URI cannot be resolved:
+
 - Verify the vault, item, and field exist
 - Check you have access to the vault
 - Ensure the URI format is correct
@@ -214,6 +219,7 @@ If a `pass://` URI cannot be resolved:
 ### Command not found
 
 If your command isn't found:
+
 - Ensure the command is in your PATH
 - Use full path: `pass-cli run -- /usr/bin/my-app`
 - Check file permissions if using a script
@@ -221,6 +227,7 @@ If your command isn't found:
 ### Environment variable not set
 
 If your application doesn't see an environment variable:
+
 - Verify the variable is in your `.env` file or exported
 - Check for typos in variable names
 - Ensure the `pass://` URI is correctly formatted

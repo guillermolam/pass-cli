@@ -15,6 +15,7 @@ The `test` command verifies that your session is valid and that you can successf
 ## How it works
 
 The command performs a simple ping operation to the Proton Pass API. If successful, it confirms that:
+
 - Your session is valid
 - You can communicate with Proton Pass servers
 - Your authentication tokens are working correctly
@@ -80,6 +81,7 @@ pass-cli test
 ### Network connectivity issues
 
 If you see network-related errors:
+
 - Check your internet connection
 - Verify firewall settings
 - Confirm Proton services are accessible
@@ -87,6 +89,7 @@ If you see network-related errors:
 ### API service issues
 
 If Proton Pass services are experiencing issues:
+
 - Check Proton's status page
 - Try again after some time
 - Contact Proton support if issues persist

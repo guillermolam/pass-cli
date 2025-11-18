@@ -23,9 +23,11 @@ pass-cli user info [--output FORMAT]
 ```
 
 **Options:**
+
 - `--output FORMAT` - Output format: `human` (default) or `json`
 
 **Examples:**
+
 ```bash
 # Display user information in human-readable format
 pass-cli user info
@@ -39,24 +41,28 @@ pass-cli user info --output json
 The `user info` command typically displays:
 
 ### Account details
+
 - **Email address**: Your Proton account email
 - **Account status**: Whether your account is active, suspended, etc.
 - **Account type**: Free, paid, or business account
 - **Subscription information**: Current plan and features
 
 ### Profile information
+
 - **Display name**: Your account display name
 - **Account creation date**: When your account was created
 - **Last login**: When you last accessed Proton Pass
 - **Account settings**: Various account preferences
 
 ### Usage statistics
+
 - **Vault count**: Number of vaults you own
 - **Item count**: Total number of items across all vaults
 - **Share count**: Number of resources you've shared
 - **Storage usage**: Amount of storage used (if applicable)
 
 ### Feature availability
+
 - **Available features**: List of features available to your account
 - **Limits**: Any usage limits based on your subscription
 - **Permissions**: Account-level permissions and capabilities
@@ -129,7 +135,7 @@ echo "=== Account Health Check ==="
 # Check account status
 if pass-cli user info > /dev/null 2>&1; then
     echo "✓ Account accessible"
-    
+
     # Get account status
     STATUS=$(pass-cli user info --output json | jq -r '.status')
     if [ "$STATUS" = "active" ]; then
@@ -137,7 +143,7 @@ if pass-cli user info > /dev/null 2>&1; then
     else
         echo "⚠ Account status: $STATUS"
     fi
-    
+
     # Check for any warnings or issues
     WARNINGS=$(pass-cli user info --output json | jq -r '.warnings[]? // empty')
     if [ -n "$WARNINGS" ]; then
@@ -146,7 +152,7 @@ if pass-cli user info > /dev/null 2>&1; then
     else
         echo "✓ No account warnings"
     fi
-    
+
 else
     echo "✗ Cannot access account information"
     echo "  Try: pass-cli login your@email.com"
@@ -227,7 +233,7 @@ ACCOUNTS=("alice@company.com" "bob@company.com" "carol@company.com")
 
 for account in "${ACCOUNTS[@]}"; do
     echo "=== Checking $account ==="
-    
+
     # Login and check account
     if pass-cli login "$account"; then
         pass-cli user info | grep -E "(Email|Status|Plan)"
@@ -235,7 +241,7 @@ for account in "${ACCOUNTS[@]}"; do
     else
         echo "Failed to login to $account"
     fi
-    
+
     echo
 done
 ```
@@ -281,11 +287,13 @@ fi
 ### Information sensitivity
 
 The `user info` command shows:
+
 - ✅ **Safe to display**: Email, plan type, feature availability
 - ⚠️ **Potentially sensitive**: Usage statistics, account IDs
 - 🔒 **Never shown**: Passwords, private keys, payment information
 
 ### Best practices
+
 - **Regular monitoring**: Check account status regularly
 - **Anomaly detection**: Watch for unexpected changes in usage or status
 - **Security alerts**: Monitor for any security-related warnings

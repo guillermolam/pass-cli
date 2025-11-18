@@ -75,20 +75,23 @@ Invoke-WebRequest -Uri https://proton.me/download/pass-cli/install.ps1 -OutFile 
 ### Dependencies
 
 **macOS:**
+
 - No additional dependencies required
 
 **Linux:**
+
 - `curl` and `jq` for the installation script
 - System libraries: `libdbus-1-3` or `dbus-libs` (for keyring support)
 
 **Windows:**
+
 - PowerShell 5.1 or later
 
 ## Manual Installation
 
 If you prefer to install manually, you can download the binary directly from:
 
-```
+```text
 https://proton.me/download/pass-cli/
 ```
 
@@ -107,11 +110,13 @@ If you want to build from source, you'll need:
 - **Cargo** (comes with Rust)
 
 **On macOS:**
+
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
 **On Linux (Ubuntu/Debian):**
+
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 sudo apt-get update
@@ -119,6 +124,7 @@ sudo apt-get install -y pkg-config libssl-dev libdbus-1-dev
 ```
 
 **On Linux (RHEL/Fedora):**
+
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 sudo dnf install -y pkg-config openssl-devel dbus-devel systemd-devel
@@ -163,4 +169,3 @@ You should see the version number. If you get a "command not found" error, make 
 ## Next Steps
 
 Once installed, proceed to the [Getting Started](../getting-started/login.md) guide to learn how to authenticate and configure the CLI.
-

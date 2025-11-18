@@ -23,11 +23,13 @@ pass-cli item list [VAULT_NAME] [--share-id SHARE_ID] [--output FORMAT]
 ```
 
 **Options:**
+
 - `VAULT_NAME` - Name of the vault to list items from (optional)
 - `--share-id SHARE_ID` - Share ID of the vault to list items from (optional)
 - `--output FORMAT` - Output format: `human` (default) or `json`
 
 **Examples:**
+
 ```bash
 # List all items in all accessible vaults
 pass-cli item list
@@ -51,6 +53,7 @@ pass-cli item create <ITEM_TYPE> [OPTIONS]
 ```
 
 **Item types:**
+
 - `login` - Login credentials (username/password)
 
 #### create login
@@ -62,6 +65,7 @@ pass-cli item create login [OPTIONS]
 ```
 
 **Options:**
+
 - `--share-id SHARE_ID` - Share ID of the vault to create the item in (required)
 - `--title TITLE` - Title of the login item (required unless using template)
 - `--username USERNAME` - Username for the login (optional)
@@ -74,6 +78,7 @@ pass-cli item create login [OPTIONS]
 - `--from-template FILE` - Create from template file or `-` for stdin
 
 **Examples:**
+
 ```bash
 # Create a basic login item
 pass-cli item create login \
@@ -119,6 +124,7 @@ pass-cli item view [OPTIONS] [URI]
 ```
 
 **Options:**
+
 - `--share-id SHARE_ID` - Share ID of the vault containing the item
 - `--item-id ITEM_ID` - ID of the item to view
 - `URI` - Pass URI in format `pass://SHARE_ID/ITEM_ID[/FIELD]`
@@ -126,6 +132,7 @@ pass-cli item view [OPTIONS] [URI]
 - `--output FORMAT` - Output format: `human` (default) or `json`
 
 **Examples:**
+
 ```bash
 # View item by IDs
 pass-cli item view --share-id "abc123def" --item-id "item456"
@@ -152,10 +159,12 @@ pass-cli item delete --share-id SHARE_ID --item-id ITEM_ID
 ```
 
 **Options:**
+
 - `--share-id SHARE_ID` - Share ID of the vault containing the item (required)
 - `--item-id ITEM_ID` - ID of the item to delete (required)
 
 **Examples:**
+
 ```bash
 # Delete an item
 pass-cli item delete --share-id "abc123def" --item-id "item456"
@@ -172,12 +181,14 @@ pass-cli item share --share-id SHARE_ID --item-id ITEM_ID EMAIL [--role ROLE]
 ```
 
 **Options:**
+
 - `--share-id SHARE_ID` - Share ID of the vault containing the item (required)
 - `--item-id ITEM_ID` - ID of the item to share (required)
 - `EMAIL` - Email address of the user to share with (required)
 - `--role ROLE` - Role to assign: `viewer`, `editor`, or `manager` (default: `viewer`)
 
 **Examples:**
+
 ```bash
 # Share item with viewer access
 pass-cli item share --share-id "abc123def" --item-id "item456" colleague@company.com
@@ -203,6 +214,7 @@ pass-cli item attachment download [OPTIONS]
 ```
 
 **Examples:**
+
 ```bash
 # Download attachment (exact options depend on implementation)
 pass-cli item attachment download --share-id "abc123def" --item-id "item456" --attachment-id "att789"
@@ -217,6 +229,7 @@ pass-cli item alias <ALIAS_SUBCOMMAND>
 ```
 
 **Examples:**
+
 ```bash
 # Alias operations (exact subcommands depend on implementation)
 pass-cli item alias create --share-id "abc123def" --title "Shopping Alias"
@@ -226,7 +239,7 @@ pass-cli item alias create --share-id "abc123def" --title "Shopping Alias"
 
 Items can be referenced using Pass URIs:
 
-```
+```text
 pass://SHARE_ID/ITEM_ID[/FIELD]
 ```
 
@@ -253,6 +266,7 @@ When using `--get-template` or `--from-template`, the JSON structure is:
 ### Random passwords
 
 Use `--generate-password` with optional settings:
+
 - Format: `"length,uppercase,symbols"`
 - Example: `--generate-password="16,true,true"` (16 chars, with uppercase and symbols)
 - Default: `--generate-password` (uses default settings)
@@ -260,6 +274,7 @@ Use `--generate-password` with optional settings:
 ### Passphrases
 
 Use `--generate-passphrase` with optional word count:
+
 - Format: `"word_count"`
 - Example: `--generate-passphrase="5"` (5-word passphrase)
 - Default: `--generate-passphrase` (uses default word count)
@@ -319,16 +334,19 @@ done
 ## Best practices
 
 ### Item organization
+
 - Use descriptive titles that make items easy to find
 - Include relevant URLs for login items
 - Group related items in the same vault
 
 ### Security
+
 - Use generated passwords when possible
 - Regularly update passwords for important accounts
 - Be cautious when sharing individual items
 
 ### Templates
+
 - Use templates for consistent item creation
 - Store template files securely
 - Validate template JSON before using
@@ -336,11 +354,13 @@ done
 ## Troubleshooting
 
 ### Creation issues
+
 - Verify you have edit permissions for the target vault
 - Check that required fields are provided
 - Ensure JSON templates are valid
 
 ### Access issues  
+
 - Confirm you have access to the vault containing the item
 - Verify share IDs and item IDs are correct
 - Check that items haven't been deleted

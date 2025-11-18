@@ -17,6 +17,7 @@ The `login` command authenticates you with Proton Pass. By default, it uses web-
 ### Default mode (web login)
 
 When run without `--interactive`, the command:
+
 1. Opens your default web browser
 2. Redirects you to Proton Pass login page
 3. After successful authentication, stores the session locally
@@ -25,6 +26,7 @@ When run without `--interactive`, the command:
 ### Interactive mode
 
 When run with `--interactive`:
+
 1. Prompts for username (or uses provided argument)
 2. Prompts for password
 3. Handles two-factor authentication (TOTP or FIDO2)
@@ -136,6 +138,7 @@ pass-cli login alice@proton.me
 ## Session management
 
 After successful login:
+
 - Your session is stored in a platform-specific location
 - The session persists across command invocations
 - Use `pass-cli logout` to end the session

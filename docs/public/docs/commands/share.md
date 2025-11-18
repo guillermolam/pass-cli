@@ -23,9 +23,11 @@ pass-cli share list [--output FORMAT]
 ```
 
 **Options:**
+
 - `--output FORMAT` - Output format: `human` (default) or `json`
 
 **Examples:**
+
 ```bash
 # List all shares in human-readable format
 pass-cli share list
@@ -39,11 +41,13 @@ pass-cli share list --output json
 A share represents the relationship between a user and a resource. There are two types of shares:
 
 ### Vault shares
+
 - **Resource**: Access to an entire vault and all items within it
 - **Scope**: Current and future items in the vault
 - **Inheritance**: Items inherit vault access permissions
 
 ### Item shares  
+
 - **Resource**: Access to a single, specific item
 - **Scope**: Only the shared item, not its parent vault
 - **Independence**: Separate from vault-level permissions
@@ -63,16 +67,19 @@ When listing shares, you'll typically see:
 Each share has an associated role that determines your permissions:
 
 ### Viewer
+
 - **Read access**: Can view the resource and its contents
 - **No modifications**: Cannot edit, delete, or share
 - **Safe access**: Perfect for read-only requirements
 
 ### Editor
+
 - **Read and write**: Can view and modify the resource
 - **Content management**: Can create, edit, and delete items (in vault shares)
 - **Limited sharing**: Cannot share with others or manage members
 
 ### Manager
+
 - **Full control**: Can perform all operations on the resource
 - **Sharing rights**: Can share the resource with other users
 - **Administrative**: Can manage members and their roles
@@ -230,16 +237,19 @@ pass-cli share list --output json | \
 ## Best practices
 
 ### Regular reviews
+
 - **Monthly audits**: Review your shares monthly
 - **Permission validation**: Ensure you still need access to shared resources
 - **Role appropriateness**: Verify your roles match your actual needs
 
 ### Security considerations
+
 - **Principle of least privilege**: You should have the minimum necessary permissions
 - **Access documentation**: Keep track of why you have access to resources
 - **Removal requests**: Request removal of access you no longer need
 
 ### Organization
+
 - **Categorization**: Group shares by purpose or project
 - **Documentation**: Maintain records of share purposes
 - **Communication**: Stay in touch with resource owners about access needs

@@ -68,19 +68,21 @@ pass-cli logout
 ## When to logout
 
 ### Required scenarios
+
 - **Shared computers**: Always logout on public or shared systems
 - **Security protocols**: When organizational policy requires session cleanup
 - **Account switching**: Before logging in with a different account
 
 ### Recommended scenarios
+
 - **End of work session**: When finishing work for the day
 - **Automated scripts**: At the end of automation scripts
 - **Troubleshooting**: When experiencing authentication issues
 
-
 ## Session persistence
 
 Without logout:
+
 - Sessions remain active across terminal sessions
 - Authentication persists until explicitly ended
 - Session data is stored securely on the local system

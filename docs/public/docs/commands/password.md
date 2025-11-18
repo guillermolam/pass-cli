@@ -23,6 +23,7 @@ pass-cli password generate <TYPE>
 ```
 
 **Types:**
+
 - `random` - Generate a random password with customizable settings
 - `memorable` - Generate a memorable passphrase using words
 
@@ -35,12 +36,14 @@ pass-cli password generate random [OPTIONS]
 ```
 
 **Options:**
+
 - `--length LENGTH` - Password length (default varies)
 - `--numbers BOOL` - Include numbers (true/false)
 - `--uppercase BOOL` - Include uppercase letters (true/false)
 - `--symbols BOOL` - Include symbols (true/false)
 
 **Examples:**
+
 ```bash
 # Generate with default settings
 pass-cli password generate random
@@ -61,12 +64,14 @@ pass-cli password generate memorable [OPTIONS]
 ```
 
 **Options:**
+
 - `--words COUNT` - Number of words in the passphrase (default varies)
 - `--separator CHAR` - Character to separate words (default varies)
 - `--capitalize BOOL` - Capitalize words (true/false)
 - `--numbers BOOL` - Include numbers (true/false)
 
 **Examples:**
+
 ```bash
 # Generate with default settings
 pass-cli password generate memorable
@@ -90,12 +95,15 @@ pass-cli password score PASSWORD [--output FORMAT]
 ```
 
 **Arguments:**
+
 - `PASSWORD` - The password to analyze (required)
 
 **Options:**
+
 - `--output FORMAT` - Output format: `human` (default) or `json`
 
 **Examples:**
+
 ```bash
 # Analyze a password
 pass-cli password score "mypassword123"
@@ -111,12 +119,14 @@ pass-cli password score "$GENERATED"
 ## Password generation best practices
 
 ### Random passwords
+
 - **Length**: Use at least 12 characters, preferably 16 or more
 - **Character types**: Include uppercase, lowercase, numbers, and symbols
 - **Uniqueness**: Generate unique passwords for each account
 - **Storage**: Store in Proton Pass, don't try to memorize
 
 ### Memorable passphrases
+
 - **Word count**: Use at least 4 words, preferably 5 or more
 - **Randomness**: Let the generator choose words randomly
 - **Separators**: Use separators to improve readability
@@ -127,12 +137,14 @@ pass-cli password score "$GENERATED"
 The `score` command analyzes several factors:
 
 ### Strength indicators
+
 - **Length**: Longer passwords are generally stronger
 - **Character diversity**: Multiple character types increase strength
 - **Unpredictability**: Random patterns are stronger than predictable ones
 - **Common patterns**: Avoids dictionary words and common substitutions
 
 ### Weakness detection
+
 - **Dictionary words**: Common words reduce strength
 - **Patterns**: Keyboard patterns (qwerty, 123456) are weak
 - **Repetition**: Repeated characters or patterns
@@ -207,17 +219,20 @@ pass-cli item create login \
 ## Security considerations
 
 ### Password generation
+
 - **Entropy**: Use sufficient randomness for security
 - **Avoiding patterns**: Don't use predictable patterns
 - **Length vs complexity**: Longer passwords are generally better than complex short ones
 - **Context**: Consider the service's password requirements
 
 ### Password analysis
+
 - **Sensitive data**: Be cautious when analyzing passwords in shared environments
 - **Command history**: Passwords may be stored in shell history
 - **Process visibility**: Other users might see passwords in process lists
 
 ### Best practices
+
 - **Generate in secure environment**: Use trusted systems for password generation
 - **Immediate storage**: Store generated passwords in Proton Pass immediately
 - **Regular updates**: Generate new passwords periodically
@@ -226,12 +241,14 @@ pass-cli item create login \
 ## Output formats
 
 ### Human-readable output
+
 - Clear strength indicators
 - Readable recommendations
 - Color coding (if terminal supports it)
 - Explanation of strength factors
 
 ### JSON output
+
 - Structured data for automation
 - Numeric strength scores
 - Detailed analysis results
@@ -240,13 +257,17 @@ pass-cli item create login \
 ## Common use cases
 
 ### Account setup
+
 Generate strong passwords when creating new accounts:
+
 ```bash
 pass-cli password generate random --length 16 --uppercase true --symbols true
 ```
 
 ### Password policy compliance
+
 Generate passwords that meet specific requirements:
+
 ```bash
 # For services requiring symbols
 pass-cli password generate random --length 12 --symbols true
@@ -256,7 +277,9 @@ pass-cli password generate random --length 16 --symbols false
 ```
 
 ### Security audits
+
 Analyze existing passwords for weakness:
+
 ```bash
 # Audit multiple passwords
 for pwd in $(cat password_list.txt); do

@@ -15,6 +15,7 @@ The `vault` command provides operations for managing vaults, which are container
 ## How it works
 
 Vaults are the top-level organizational structure in Proton Pass. Each vault:
+
 - Contains multiple items (logins, notes, passwords, etc.)
 - Has a unique Share ID for identification
 - Can be shared with other users with different permission levels
@@ -33,9 +34,11 @@ pass-cli vault list [--output FORMAT]
 ```
 
 **Options:**
+
 - `--output FORMAT` - Output format: `human` (default) or `json`
 
 **Examples:**
+
 ```bash
 # List vaults in human-readable format
 pass-cli vault list
@@ -53,9 +56,11 @@ pass-cli vault create --name NAME
 ```
 
 **Options:**
+
 - `--name NAME` - Name of the vault (required)
 
 **Examples:**
+
 ```bash
 # Create a personal vault
 pass-cli vault create --name "Personal Accounts"
@@ -73,14 +78,17 @@ pass-cli vault update (--share-id SHARE_ID | --vault-name NAME) --name NEW_NAME
 ```
 
 **Options:**
+
 - `--share-id SHARE_ID` - Share ID of the vault to update
 - `--vault-name NAME` - Name of the vault to update
 - `--name NEW_NAME` - New name for the vault (required)
 
 **Mutually exclusive options:**
+
 - `--share-id` and `--vault-name` are mutually exclusive. You must provide exactly one.
 
 **Examples:**
+
 ```bash
 # Rename a vault by Share ID
 pass-cli vault update --share-id "abc123def" --name "Updated Vault Name"
@@ -98,13 +106,16 @@ pass-cli vault delete (--share-id SHARE_ID | --vault-name NAME)
 ```
 
 **Options:**
+
 - `--share-id SHARE_ID` - Share ID of the vault to delete
 - `--vault-name NAME` - Name of the vault to delete
 
 **Mutually exclusive options:**
+
 - `--share-id` and `--vault-name` are mutually exclusive. You must provide exactly one.
 
 **Examples:**
+
 ```bash
 # Delete a vault by Share ID (this also deletes all items in it!)
 pass-cli vault delete --share-id "abc123def"
@@ -124,11 +135,13 @@ pass-cli vault member <SUBCOMMAND>
 ```
 
 **Subcommands:**
+
 - `list` - List members of a vault
 - `update` - Update a member's role
 - `remove` - Remove a member from a vault
 
 **Examples:**
+
 ```bash
 # List vault members (by Share ID)
 pass-cli vault member list --share-id "abc123def"
@@ -154,15 +167,18 @@ pass-cli vault share (--share-id SHARE_ID | --vault-name NAME) EMAIL [--role ROL
 ```
 
 **Options:**
+
 - `--share-id SHARE_ID` - Share ID of the vault to share
 - `--vault-name NAME` - Name of the vault to share
 - `EMAIL` - Email address of the user to share with (required)
 - `--role ROLE` - Role to assign: `viewer`, `editor`, or `manager` (default: `viewer`)
 
 **Mutually exclusive options:**
+
 - `--share-id` and `--vault-name` are mutually exclusive. You must provide exactly one.
 
 **Examples:**
+
 ```bash
 # Share vault with viewer access (by Share ID)
 pass-cli vault share --share-id "abc123def" colleague@company.com
@@ -233,16 +249,19 @@ pass-cli vault members --share-id "$SHARE_ID"
 ## Best practices
 
 ### Naming conventions
+
 - Use descriptive names that indicate the vault's purpose
 - Consider prefixes for organization (e.g., "Work - ", "Personal - ")
 - Keep names concise but meaningful
 
 ### Sharing strategy
+
 - Start with minimal permissions (viewer) and increase as needed
 - Regularly review vault members and their roles
 - Use manager role sparingly - only for trusted administrators
 
 ### Organization
+
 - Create separate vaults for different contexts (work, personal, projects)
 - Group related items together in the same vault
 - Consider vault sharing boundaries when organizing
@@ -250,11 +269,13 @@ pass-cli vault members --share-id "$SHARE_ID"
 ## Troubleshooting
 
 ### Permission errors
+
 - Ensure you have manager rights to perform administrative operations
 - Verify you're using the correct share ID
 - Check that the target user has a Proton Pass account
 
 ### Share ID issues
+
 - Double-check the share ID from `pass-cli vault list`
 - Share IDs are case-sensitive
 - Ensure you're copying the complete ID
@@ -268,14 +289,17 @@ pass-cli vault transfer (--share-id SHARE_ID | --vault-name NAME) MEMBER_SHARE_I
 ```
 
 **Options:**
+
 - `--share-id SHARE_ID` - Share ID of the vault to transfer
 - `--vault-name NAME` - Name of the vault to transfer
 - `MEMBER_SHARE_ID` - Share ID of the member who will become the new owner (required)
 
 **Mutually exclusive options:**
+
 - `--share-id` and `--vault-name` are mutually exclusive. You must provide exactly one.
 
 **Examples:**
+
 ```bash
 # Transfer vault ownership by Share ID
 pass-cli vault transfer --share-id "abc123def" "member_share_id_xyz"

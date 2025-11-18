@@ -15,6 +15,7 @@ The `info` command displays information about your current Proton Pass session, 
 ## How it works
 
 The command retrieves user information from the Proton Pass API and displays:
+
 - User ID
 - Username
 - Email address
@@ -90,6 +91,7 @@ fi
 ### Authentication issues
 
 If `pass-cli info` fails:
+
 1. You're not logged in - use `pass-cli login`
 2. Session expired - re-authenticate
 3. Network issues - check connectivity
@@ -97,6 +99,7 @@ If `pass-cli info` fails:
 ### Unexpected user
 
 If the wrong user is shown:
+
 1. Logout: `pass-cli logout`
 2. Login with correct account: `pass-cli login correct@email.com`
 

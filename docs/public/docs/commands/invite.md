@@ -23,9 +23,11 @@ pass-cli invite list [--output FORMAT]
 ```
 
 **Options:**
+
 - `--output FORMAT` - Output format: `human` (default) or `json`
 
 **Examples:**
+
 ```bash
 # List pending invitations
 pass-cli invite list
@@ -43,9 +45,11 @@ pass-cli invite accept --invite-token TOKEN
 ```
 
 **Options:**
+
 - `--invite-token TOKEN` - The invitation token to accept (required)
 
 **Examples:**
+
 ```bash
 # Accept an invitation
 pass-cli invite accept --invite-token "abc123def456"
@@ -60,9 +64,11 @@ pass-cli invite reject --invite-token TOKEN
 ```
 
 **Options:**
+
 - `--invite-token TOKEN` - The invitation token to reject (required)
 
 **Examples:**
+
 ```bash
 # Reject an invitation
 pass-cli invite reject --invite-token "abc123def456"
@@ -85,9 +91,11 @@ pass-cli invite group list [--output FORMAT]
 ```
 
 **Options:**
+
 - `--output FORMAT` - Output format: `human` (default) or `json`
 
 **Examples:**
+
 ```bash
 # List group invitations
 pass-cli invite group list
@@ -105,9 +113,11 @@ pass-cli invite group accept --invite-token TOKEN
 ```
 
 **Options:**
+
 - `--invite-token TOKEN` - The group invitation token to accept (required)
 
 **Examples:**
+
 ```bash
 # Accept a group invitation
 pass-cli invite group accept --invite-token "group789xyz"
@@ -118,16 +128,19 @@ pass-cli invite group accept --invite-token "group789xyz"
 ### Types of invitations
 
 #### Vault invitations
+
 - **Purpose**: Grant access to an entire vault and all its items
 - **Scope**: Current and future items in the vault
 - **Roles**: Can be viewer, editor, or manager
 
 #### Item invitations
+
 - **Purpose**: Grant access to a specific item
 - **Scope**: Only the shared item, not its parent vault
 - **Roles**: Can be viewer, editor, or manager
 
 #### Group invitations
+
 - **Purpose**: Add you to a user group or organization
 - **Scope**: May grant access to multiple resources
 - **Management**: Centralized access management
@@ -164,18 +177,21 @@ pass-cli invite group accept --invite-token "group_invite_456"
 ## Invitation lifecycle
 
 ### Receiving invitations
+
 1. **Notification**: You receive an invitation (email, in-app notification)
 2. **Listing**: Use `pass-cli invite list` to see pending invitations
 3. **Review**: Examine invitation details (resource, inviter, role)
 4. **Decision**: Choose to accept or reject the invitation
 
 ### Processing invitations
+
 1. **Acceptance**: Use `pass-cli invite accept` to gain access
 2. **Rejection**: Use `pass-cli invite reject` to decline access
 3. **Verification**: After confirming, run `pass-cli share list` to confirm new access
 4. **Usage**: Access the shared resource through normal commands
 
 ### Expiration
+
 - **Time limits**: Invitations may have expiration dates
 - **Automatic cleanup**: Expired invitations are automatically removed
 - **Re-invitation**: Inviters may need to send new invitations if they expire
@@ -183,6 +199,7 @@ pass-cli invite group accept --invite-token "group_invite_456"
 ## Best practices
 
 ### Security considerations
+
 - **Verify inviter**: Ensure invitations come from trusted sources
 - **Review permissions**: Check what role is being offered
 - **Principle of least privilege**: Only accept invitations you actually need

@@ -2,7 +2,7 @@
 
 An **Item** is the fundamental unit of data storage in Proton Pass. Items contain your sensitive information such as login credentials, secure notes, credit card details, and other personal data.
 
-Items are identified by an item ID, but be aware that this ID is not necessarily unique! The only guarantee of uniqueness is that the ShareID + ItemID combination is globally unique. 
+Items are identified by an item ID, but be aware that this ID is not necessarily unique! The only guarantee of uniqueness is that the ShareID + ItemID combination is globally unique.
 
 ## Key characteristics
 
@@ -68,6 +68,7 @@ Items can be shared in two ways:
 2. **Individual item sharing**: Specific items can be shared with users who don't have access to the full vault
 
 When you share an item individually:
+
 - A **Share** relationship is created between the user and the specific item
 - The recipient can access only that item, not the entire vault
 - You can control the recipient's permissions (view, edit, etc.)
@@ -87,7 +88,7 @@ Common operations you can perform on items:
 
 Items can be referenced using Proton Pass URIs:
 
-```
+```text
 pass://SHARE_ID/ITEM_ID[/FIELD]
 ```
 

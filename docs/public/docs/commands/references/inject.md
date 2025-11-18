@@ -35,7 +35,8 @@ Use double braces to mark secret references:
 {{ pass://vault/item/field }}
 ```
 
-**Important**: 
+**Important**:
+
 - Only references wrapped in `{{ }}` are processed
 - Plain `pass://` URIs in comments or elsewhere are ignored
 - The double braces are required for the `inject` command (unlike `run` which processes bare `pass://` URIs)
@@ -43,11 +44,13 @@ Use double braces to mark secret references:
 ### Reference format
 
 Secret references follow this format:
-```
+
+```text
 {{ pass://<vault-identifier>/<item-identifier>/<field-name> }}
 ```
 
 Where:
+
 - **vault-identifier**: Vault Share ID or vault name
 - **item-identifier**: Item ID or item title
 - **field-name**: Field name (e.g., `password`, `username`, `api_key`)
@@ -152,4 +155,3 @@ The resulting `config.yaml` will have actual secret values instead of references
 
 - **[run](run.md)** - Execute commands with secrets injected from references
 - **[secret-references](secret-references.md)** - Complete guide to secret reference syntax and usage
-
