@@ -116,8 +116,8 @@ impl PassClient {
 
     fn get_os_info() -> HashMap<String, String> {
         let mut os_info: HashMap<String, String> = HashMap::new();
-        os_info.insert("os".to_string(), std::env::consts::OS.to_string());
-        os_info.insert("arch".to_string(), std::env::consts::ARCH.to_string());
+        os_info.insert("cliOs".to_string(), std::env::consts::OS.to_string());
+        os_info.insert("cliArch".to_string(), std::env::consts::ARCH.to_string());
         os_info
     }
 }
