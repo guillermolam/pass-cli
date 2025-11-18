@@ -52,15 +52,23 @@ impl PassClient {
             .context("Error getting user access")?
             .plan
             .internal_name;
+
+        let mut extra_dimensions = Self::get_os_info();
+        extra_dimensions.insert(PLAN_NAME_KEY.to_string(), plan);
+
         let chunks = events.chunks(EVENT_CHUNK_SIZE);
         for chunk in chunks {
-            self.send_telemetry_chunk(&plan, chunk).await?;
+            self.send_telemetry_chunk(&extra_dimensions, chunk).await?;
         }
         Ok(())
     }
 
-    async fn send_telemetry_chunk(&self, plan: &str, chunk: &[TelemetryEventData]) -> Result<()> {
-        let body = Self::build_request(plan, chunk);
+    async fn send_telemetry_chunk(
+        &self,
+        extra_dimensions: &HashMap<String, String>,
+        chunk: &[TelemetryEventData],
+    ) -> Result<()> {
+        let body = Self::build_request(extra_dimensions, chunk);
         let req = POST!("/data/v1/stats/multiple")
             .body_json(body)
             .context("Error creating telemetry request")?;
@@ -72,20 +80,28 @@ impl PassClient {
         Ok(())
     }
 
-    fn build_request(plan: &str, chunk: &[TelemetryEventData]) -> SendTelemetryRequest {
+    fn build_request(
+        extra_dimensions: &HashMap<String, String>,
+        chunk: &[TelemetryEventData],
+    ) -> SendTelemetryRequest {
         let mut events = Vec::new();
 
         for event in chunk {
-            let event_info = Self::build_event(plan, event);
+            let event_info = Self::build_event(extra_dimensions, event);
             events.push(event_info);
         }
 
         SendTelemetryRequest { event_info: events }
     }
 
-    fn build_event(plan: &str, event: &TelemetryEventData) -> EventInfo {
+    fn build_event(
+        extra_dimensions: &HashMap<String, String>,
+        event: &TelemetryEventData,
+    ) -> EventInfo {
         let mut dimensions = event.dimensions.clone();
-        dimensions.insert(PLAN_NAME_KEY.to_string(), plan.to_string());
+        for (name, value) in extra_dimensions {
+            dimensions.insert(name.to_string(), value.to_string());
+        }
 
         EventInfo {
             measurement_group: MEASUREMENT_GROUP.to_string(),
@@ -93,5 +109,12 @@ impl PassClient {
             values: HashMap::new(), // unused
             dimensions,
         }
+    }
+
+    fn get_os_info() -> HashMap<String, String> {
+        let mut os_info: HashMap<String, String> = HashMap::new();
+        os_info.insert("os".to_string(), std::env::consts::OS.to_string());
+        os_info.insert("arch".to_string(), std::env::consts::ARCH.to_string());
+        os_info
     }
 }
