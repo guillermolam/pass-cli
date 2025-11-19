@@ -192,7 +192,7 @@ impl Store<PassSessionKeyType> for PassSessionStore {
     }
 }
 
-/// Wrapper around Arc<RwLock<PassSessionStore>> that implements Store
+/// Wrapper around `Arc<RwLock<PassSessionStore>>` that implements Store
 #[derive(Clone)]
 pub struct SharedPassSessionStore {
     pub inner: Arc<RwLock<PassSessionStore>>,
