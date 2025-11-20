@@ -17,12 +17,12 @@ Welcome to the Proton Pass CLI documentation. The Proton Pass CLI is a command-l
     margin: 24px 0;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   }
-  
+
   .cta-header {
     text-align: center;
     margin-bottom: 28px;
   }
-  
+
   .cta-title {
     margin: 0;
     font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
@@ -32,7 +32,7 @@ Welcome to the Proton Pass CLI documentation. The Proton Pass CLI is a command-l
     text-shadow: 0 0 20px rgba(108, 99, 255, 0.5), 0 2px 4px rgba(0, 0, 0, 0.8);
     letter-spacing: 1px;
   }
-  
+
   .terminal-box {
     background: #0a0a0a;
     border: 1px solid #333;
@@ -44,15 +44,15 @@ Welcome to the Proton Pass CLI documentation. The Proton Pass CLI is a command-l
     color: #e0e0e0;
     box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
   }
-  
+
   .command-section {
     margin-bottom: 20px;
   }
-  
+
   .command-section:last-child {
     margin-bottom: 0;
   }
-  
+
   .command-label {
     color: #888;
     margin-bottom: 6px;
@@ -60,20 +60,20 @@ Welcome to the Proton Pass CLI documentation. The Proton Pass CLI is a command-l
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
-  
+
   .command-line {
     display: flex;
     align-items: center;
     justify-content: space-between;
     position: relative;
   }
-  
+
   .command-text {
     color: #4ecca3;
     font-weight: 500;
     flex: 1;
   }
-  
+
   .copy-btn {
     background: transparent;
     border: none;
@@ -87,12 +87,12 @@ Welcome to the Proton Pass CLI documentation. The Proton Pass CLI is a command-l
     align-items: center;
     justify-content: center;
   }
-  
+
   .copy-btn:hover {
     background: rgba(76, 204, 163, 0.15);
     opacity: 1;
   }
-  
+
   .command-line:hover .copy-btn {
     opacity: 1;
   }
@@ -102,7 +102,7 @@ Welcome to the Proton Pass CLI documentation. The Proton Pass CLI is a command-l
   <div class="cta-header">
     <h3 class="cta-title">Get started in seconds</h3>
   </div>
-  
+
   <div class="terminal-box">
     <div class="command-section">
       <div class="command-label">→ Download Pass CLI</div>
@@ -116,7 +116,7 @@ Welcome to the Proton Pass CLI documentation. The Proton Pass CLI is a command-l
         </button>
       </div>
     </div>
-    
+
     <div class="command-section">
       <div class="command-label">→ Log in</div>
       <div class="command-line">
@@ -129,7 +129,7 @@ Welcome to the Proton Pass CLI documentation. The Proton Pass CLI is a command-l
         </button>
       </div>
     </div>
-    
+
     <div class="command-section">
       <div class="command-label">→ Start using it</div>
       <div class="command-line">
@@ -150,12 +150,12 @@ Welcome to the Proton Pass CLI documentation. The Proton Pass CLI is a command-l
     navigator.clipboard.writeText(text).then(function() {
       const svg = button.querySelector('svg');
       const originalStroke = svg.getAttribute('stroke');
-      
+
       // Change to checkmark
       svg.innerHTML = '<polyline points="20 6 9 17 4 12"></polyline>';
       svg.setAttribute('stroke', '#4ecca3');
       button.style.opacity = '1';
-      
+
       // Reset after 2 seconds
       setTimeout(function() {
         svg.innerHTML = '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>';
