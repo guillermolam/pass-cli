@@ -46,6 +46,8 @@ pass-cli logout --force
 # Successfully performed force logout
 ```
 
+Keep in mind that if you run this command instead of the regular one, the session will still be listed on your active sessions list page in the Proton account settings.
+
 ### Logout in scripts
 
 ```bash
@@ -97,8 +99,10 @@ If logout fails or behaves unexpectedly:
 ```bash
 # Force logout by removing local data manually
 # (This is a last resort - normal logout should work)
-rm -rf ~/.config/pass-cli/  # Linux/macOS
+rm -rf ~/.local/share/proton-pass-cli/  # Linux/macOS
 ```
+
+Take into account that if you have defined `PROTON_PASS_SESSION_DIR`, the path to the session data will be the one you specified. 
 
 ### Verification
 

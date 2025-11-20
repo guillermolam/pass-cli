@@ -10,7 +10,7 @@ pass-cli invite <SUBCOMMAND>
 
 ## Description
 
-The `invite` command provides operations for managing invitations to access vaults and items. You can list pending invitations, accept or reject invitations, and manage group invitations.
+The `invite` command provides operations for managing invitations to access vaults and items. You can list pending invitations, accept or reject invitations.
 
 ## Subcommands
 
@@ -74,55 +74,6 @@ pass-cli invite reject --invite-token TOKEN
 pass-cli invite reject --invite-token "abc123def456"
 ```
 
-### group
-
-Manage group invitations.
-
-```bash
-pass-cli invite group <GROUP_SUBCOMMAND>
-```
-
-#### group list
-
-List pending group invitations.
-
-```bash
-pass-cli invite group list [--output FORMAT]
-```
-
-**Options:**
-
-- `--output FORMAT` - Output format: `human` (default) or `json`
-
-**Examples:**
-
-```bash
-# List group invitations
-pass-cli invite group list
-
-# List group invitations in JSON format
-pass-cli invite group list --output json
-```
-
-#### group accept
-
-Accept a group invitation.
-
-```bash
-pass-cli invite group accept --invite-token TOKEN
-```
-
-**Options:**
-
-- `--invite-token TOKEN` - The group invitation token to accept (required)
-
-**Examples:**
-
-```bash
-# Accept a group invitation
-pass-cli invite group accept --invite-token "group789xyz"
-```
-
 ## Understanding invitations
 
 ### Types of invitations
@@ -131,13 +82,13 @@ pass-cli invite group accept --invite-token "group789xyz"
 
 - **Purpose**: Grant access to an entire vault and all its items
 - **Scope**: Current and future items in the vault
-- **Roles**: Can be viewer, editor, or manager
+- **Roles**: Can be `viewer`, `editor`, or `manager`
 
 #### Item invitations
 
 - **Purpose**: Grant access to a specific item
 - **Scope**: Only the shared item, not its parent vault
-- **Roles**: Can be viewer, editor, or manager
+- **Roles**: Can be `viewer`, `editor`, or `manager`
 
 #### Group invitations
 
@@ -149,12 +100,11 @@ pass-cli invite group accept --invite-token "group789xyz"
 
 When listing invitations, you'll typically see:
 
-- **Invitation type**: Vault, item, or group invitation
-- **Resource name**: Name of the vault, item, or group
+- **Invitation type**: Vault or Item
+- **Resource name**: Name of the vault or item
 - **Inviter**: Who sent the invitation
 - **Role offered**: Permission level being granted
 - **Invitation date**: When the invitation was sent
-- **Expiration**: When the invitation expires (if applicable)
 
 ## Examples
 
@@ -165,13 +115,8 @@ When listing invitations, you'll typically see:
 echo "=== Pending Invitations ==="
 pass-cli invite list
 
-# Check for group invitations
-echo -e "\n=== Group Invitations ==="
-pass-cli invite group list
-
 # Accept specific invitations
 pass-cli invite accept --invite-token "vault_invite_123"
-pass-cli invite group accept --invite-token "group_invite_456"
 ```
 
 ## Invitation lifecycle
@@ -189,12 +134,6 @@ pass-cli invite group accept --invite-token "group_invite_456"
 2. **Rejection**: Use `pass-cli invite reject` to decline access
 3. **Verification**: After confirming, run `pass-cli share list` to confirm new access
 4. **Usage**: Access the shared resource through normal commands
-
-### Expiration
-
-- **Time limits**: Invitations may have expiration dates
-- **Automatic cleanup**: Expired invitations are automatically removed
-- **Re-invitation**: Inviters may need to send new invitations if they expire
 
 ## Best practices
 
@@ -214,16 +153,15 @@ If you expect invitations that don't appear:
 1. **Email verification**: Check if invitations were sent to the correct email
 2. **Spam folder**: Check email spam/junk folders
 3. **Account synchronization**: Try logging out and back in
-4. **Inviter contact**: Contact the person who sent the invitation
+4. **Contact inviter**: Contact the person who sent the invitation
 
 ### Invalid tokens
 
 If invitation tokens don't work:
 
 1. **Token accuracy**: Ensure you're using the complete, correct token
-2. **Expiration**: Check if the invitation has expired
-3. **Already processed**: Verify you haven't already accepted/rejected it
-4. **Re-invitation**: Ask the inviter to send a new invitation
+2. **Already processed**: Verify you haven't already accepted/rejected it
+3. **Re-invitation**: Ask the inviter to send a new invitation
 
 ### Permission issues
 

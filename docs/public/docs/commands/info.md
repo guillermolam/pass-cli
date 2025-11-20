@@ -20,7 +20,6 @@ The command retrieves user information from the Proton Pass API and displays:
 - Username
 - Email address
 - Release track (stable, beta, etc.)
-- Environment (only shown if not production)
 
 ## Arguments
 
@@ -34,7 +33,6 @@ The command displays:
 - **Username**: Your Proton account username
 - **Email**: Your Proton account email address
 - **Release track**: The release track you're using (stable, beta, etc.)
-- **ENV**: The environment (only shown if not production)
 
 ## Examples
 
@@ -42,10 +40,10 @@ The command displays:
 
 ```bash
 pass-cli info
-- ENV: Production
-- ID: YOUR_USER_ID_HERE
-- Username: yourusername
-- Email: yourusername@proton.me
+- Release track: stable
+- ID: YOUR_USER_ID
+- Username: your-username
+- Email: youruser@proton.me
 ```
 
 ### Troubleshooting workflow
@@ -101,7 +99,7 @@ If `pass-cli info` fails:
 If the wrong user is shown:
 
 1. Logout: `pass-cli logout`
-2. Login with correct account: `pass-cli login correct@email.com`
+2. Login with correct account: `pass-cli login --interactive correct@email.com`
 
 ## Privacy considerations
 
