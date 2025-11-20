@@ -28,7 +28,8 @@ nav = [
       "commands/references/run.md",
       "commands/references/inject.md",
     ]},
-  ]}
+  ]},
+  {"Help" = ["help/faq.md", "help/troubleshoot.md"]}
 ]
 
 [project.theme]
