@@ -121,7 +121,7 @@ sudo apt update && sudo apt upgrade -y
 3. Install required dependencies:
 
 ```bash
-sudo apt install -y curl jq libdbus-1-3
+sudo apt install -y curl jq
 ```
 
 4. Install Proton Pass CLI using the installation script:

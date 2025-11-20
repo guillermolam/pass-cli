@@ -210,64 +210,6 @@ detect_package_manager() {
     fi
 }
 
-# Check Linux dependencies
-check_linux_dependencies() {
-    pkg_manager=$(detect_package_manager)
-    missing_deps=()
-    
-    case "$pkg_manager" in
-        apt)
-            # Check for libdbus-1-3
-            if ! dpkg -s libdbus-1-3 &> /dev/null; then
-                missing_deps+=("libdbus-1-3")
-            fi
-            ;;
-        dnf|yum)
-            # Check for dbus-libs
-            if ! rpm -q dbus-libs &> /dev/null; then
-                missing_deps+=("dbus-libs")
-            fi
-            ;;
-        unknown)
-            log_warn "Unknown package manager. Skipping dependency check."
-            log_warn "Please ensure libdbus is installed for proper operation."
-            return
-            ;;
-    esac
-    
-    if [ ${#missing_deps[@]} -eq 0 ]; then
-        log_info "All required dependencies are installed"
-        return
-    fi
-    
-    log_warn "Missing runtime dependencies: ${missing_deps[*]}"
-    echo ""
-    read -p "Do you want to install missing dependencies? [Y/n] " -n 1 -r
-    echo ""
-    
-    if [[ $REPLY =~ ^[Nn]$ ]]; then
-        log_warn "Skipping dependency installation. The CLI may not work correctly."
-        return
-    fi
-    
-    log_info "Installing dependencies..."
-    
-    case "$pkg_manager" in
-        apt)
-            sudo apt-get update
-            sudo apt-get install -y "${missing_deps[@]}"
-            ;;
-        dnf)
-            sudo dnf install -y "${missing_deps[@]}"
-            ;;
-        yum)
-            sudo yum install -y "${missing_deps[@]}"
-            ;;
-    esac
-    
-    log_info "Dependencies installed successfully"
-}
-
 # Determine install directory
 get_install_dir() {
     if [ -n "$PROTON_PASS_CLI_INSTALL_DIR" ]; then
@@ -389,11 +331,6 @@ main() {
     trap "rm -f $temp_file" EXIT
     
     download_binary "$url" "$hash" "$temp_file"
-    
-    # Check Linux dependencies if on Linux
-    if [ "$os" = "linux" ]; then
-        check_linux_dependencies
-    fi
     
     # Install binary
     install_binary "$temp_file"
