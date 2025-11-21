@@ -1,3 +1,4 @@
+pub(crate) mod env_key_provider;
 pub(crate) mod keyring;
 
 use crate::telemetry::SqliteTelemetryHandler;
@@ -28,8 +29,12 @@ fn get_key_provider(base_dir: PathBuf) -> Result<Arc<dyn LocalKeyProvider>> {
             info!("Using keyring-based local key provider");
             Ok(Arc::new(keyring::KeyringKeyProvider::new(base_dir)?))
         }
+        "env" => {
+            info!("Using environment variable-based local key provider");
+            Ok(Arc::new(env_key_provider::EnvLocalKeyProvider::new()?))
+        }
         _ => Err(anyhow::anyhow!(
-            "Invalid PROTON_PASS_KEY_PROVIDER value: '{}'. Valid values are 'fs' or 'keyring'",
+            "Invalid PROTON_PASS_KEY_PROVIDER value: '{}'. Valid values are 'fs', 'keyring', or 'env'",
             provider_type
         )),
     }
