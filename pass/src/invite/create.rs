@@ -1,9 +1,10 @@
 use crate::PassClient;
 use crate::crypto::encrypt_invite_keys::{EncryptInviteKeysFlow, InviteKeyToPrepare};
 use crate::item::item_keys::OpenedItemKeys;
-use crate::share::ShareKeys;
 use anyhow::{Context, Result};
-use pass_domain::{Address, ItemId, PublicKey, Share, ShareId, ShareRole, ShareType, TargetType};
+use pass_domain::{
+    Address, DecryptedShareKey, ItemId, PublicKey, Share, ShareId, ShareRole, ShareType, TargetType,
+};
 
 pub(crate) enum InviteRequest {
     ExistingUser(CreateInvitesRequest),
@@ -71,7 +72,7 @@ enum InviteUserMode {
 
 enum InviteTarget {
     Vault {
-        share_keys: ShareKeys,
+        share_keys: Vec<DecryptedShareKey>,
     },
     Item {
         item_id: ItemId,
@@ -119,15 +120,14 @@ impl PassClient {
             .await
             .context("Error getting address")?;
 
-        let share_keys = self
-            .get_share_keys(share_id)
-            .await
-            .context("Error getting share keys")?;
-
         let invite_target = match item_id {
             None => match &share.share_type {
                 ShareType::Vault { .. } => {
                     // User with vault access is sharing vault access
+                    let share_keys = self
+                        .get_all_opened_share_keys(share_id, true) // Force refresh as we want all the keys
+                        .await
+                        .context("Error getting opened share keys")?;
                     InviteTarget::Vault { share_keys }
                 }
                 ShareType::Item { .. } => {
@@ -230,7 +230,7 @@ impl PassClient {
 
     async fn create_new_user_invite(
         &self,
-        share: &Share,
+        _share: &Share,
         user_address: Address,
         address_to_invite: &str,
         role: &ShareRole,
@@ -238,14 +238,14 @@ impl PassClient {
     ) -> Result<InviteRequest> {
         let target_type = invite_target.target_type().value();
         let item_id = invite_target.item_id().map(|i| i.value().to_string());
-        let key_to_encrypt = match invite_target {
+        let key_to_encrypt = match &invite_target {
             InviteTarget::Vault { share_keys, .. } => {
-                let latest = share_keys.latest_or_err()?;
-                let latest_opened = self
-                    .open_share_key_for_share(share, latest.clone())
-                    .await
-                    .context("Error opening share key")?;
-                latest_opened.value()
+                // Get the latest key (highest rotation)
+                let latest = share_keys
+                    .iter()
+                    .max_by_key(|k| k.key_rotation)
+                    .ok_or_else(|| anyhow::anyhow!("No share keys found"))?;
+                latest.key().to_vec()
             }
             InviteTarget::Item { item_keys, .. } => {
                 let latest = item_keys
@@ -334,23 +334,18 @@ impl PassClient {
 
     async fn prepare_keys_to_invite(
         &self,
-        share: &Share,
+        _share: &Share,
         invite_target: InviteTarget,
     ) -> Result<Vec<InviteKeyToPrepare>> {
         match invite_target {
             InviteTarget::Vault { share_keys, .. } => {
-                let mut res = Vec::with_capacity(share_keys.keys.len());
-                for key in share_keys.keys {
-                    let rotation = key.key_rotation;
-                    let opened = self
-                        .open_share_key_for_share(share, key)
-                        .await
-                        .context("Error opening share key")?;
-                    res.push(InviteKeyToPrepare {
-                        decrypted_key: opened.value(),
-                        key_rotation: rotation,
-                    });
-                }
+                let res = share_keys
+                    .into_iter()
+                    .map(|key| InviteKeyToPrepare {
+                        decrypted_key: key.key().to_vec(),
+                        key_rotation: key.key_rotation,
+                    })
+                    .collect();
                 Ok(res)
             }
             InviteTarget::Item { item_keys, .. } => Ok(item_keys
