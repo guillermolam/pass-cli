@@ -52,6 +52,17 @@ async fn replace_binary_unix(current_exe: &Path, new_binary: &Path) -> Result<()
 }
 
 #[cfg(windows)]
+fn strip_extended_length_path_prefix(path: &str) -> String {
+    // Remove the \\?\ prefix that Windows uses for extended-length paths
+    // This prefix doesn't work with batch commands like xcopy
+    if path.starts_with(r"\\?\") {
+        path[4..].to_string()
+    } else {
+        path.to_string()
+    }
+}
+
+#[cfg(windows)]
 pub async fn replace_binary_from_dir(source_dir: &Path) -> Result<()> {
     use tokio::process::Command;
 
@@ -76,42 +87,38 @@ pub async fn replace_binary_from_dir(source_dir: &Path) -> Result<()> {
     let script_path = temp_dir.join(format!("pass-cli-update-{}.bat", std::process::id()));
 
     // Convert paths to strings for batch script
-    let source_dir_str = source_dir.to_string_lossy();
-    let install_dir_str = install_dir.to_string_lossy();
-    
+    // Strip the Windows extended-length path prefix (\\?\) which doesn't work with batch commands
+    let source_dir_str = strip_extended_length_path_prefix(&source_dir.to_string_lossy());
+    let install_dir_str = strip_extended_length_path_prefix(&install_dir.to_string_lossy());
+
+    let script_path_str = script_path.to_string_lossy().to_string();
+
     let script_content = format!(
         "@echo off\r\n\
-        echo Waiting for process to exit...\r\n\
         :wait\r\n\
         timeout /t 1 /nobreak >nul 2>&1\r\n\
-        tasklist /FI \"PID eq {pid}\" 2>nul | find \"{pid}\" >nul\r\n\
+        tasklist /FI \"PID eq {pid}\" 2>nul | find \"{pid}\" >nul 2>&1\r\n\
         if not errorlevel 1 goto wait\r\n\
-        echo Copying files from {source} to {dest}\r\n\
-        xcopy /Y /E /I \"{source}\\*\" \"{dest}\\\"\r\n\
-        if errorlevel 1 (\r\n\
-          echo xcopy failed with error level %errorlevel%\r\n\
-          pause\r\n\
-          exit /b 1\r\n\
-        )\r\n\
-        echo Cleaning up temporary directory...\r\n\
-        rmdir /S /Q \"{source}\"\r\n\
-        del \"%~f0\"\r\n",
+        xcopy /Y /E /I /Q \"{source}\\*\" \"{dest}\\\" >nul 2>&1\r\n\
+        rmdir /S /Q \"{source}\" >nul 2>&1\r\n\
+        del /F /Q \"{script}\" >nul 2>&1\r\n",
         pid = std::process::id(),
         source = source_dir_str,
-        dest = install_dir_str
+        dest = install_dir_str,
+        script = script_path_str
     );
 
     tokio::fs::write(&script_path, script_content)
         .await
         .context("Failed to create update script")?;
 
-    // Spawn detached process to run the script
+    // Spawn detached process to run the script without creating a visible window
+    // We use 'start /B' to run in background, and CREATE_NO_WINDOW to prevent console creation
     const CREATE_NO_WINDOW: u32 = 0x08000000;
-    const DETACHED_PROCESS: u32 = 0x00000008;
 
     Command::new("cmd")
-        .args(&["/C", "start", "/B", script_path.to_str().unwrap()])
-        .creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS)
+        .args(&["/C", "start", "/B", "cmd", "/C", &script_path_str])
+        .creation_flags(CREATE_NO_WINDOW)
         .spawn()
         .context("Failed to spawn update helper")?;
 
