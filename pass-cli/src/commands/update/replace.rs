@@ -1,6 +1,12 @@
-use anyhow::{Context, Result, anyhow};
-use std::path::{Path, PathBuf};
+#[cfg(unix)]
+use anyhow::anyhow;
+use anyhow::{Context, Result};
+use std::path::Path;
 
+#[cfg(unix)]
+use std::path::PathBuf;
+
+#[cfg(unix)]
 pub async fn replace_binary(new_binary: &Path) -> Result<()> {
     let current_exe = std::env::current_exe().context("Failed to get current executable path")?;
 
@@ -9,15 +15,7 @@ pub async fn replace_binary(new_binary: &Path) -> Result<()> {
         .await
         .context("Failed to resolve current executable path")?;
 
-    #[cfg(unix)]
-    {
-        replace_binary_unix(&current_exe, new_binary).await
-    }
-
-    #[cfg(windows)]
-    {
-        replace_binary_windows(&current_exe, new_binary).await
-    }
+    replace_binary_unix(&current_exe, new_binary).await
 }
 
 #[cfg(unix)]
@@ -54,44 +52,73 @@ async fn replace_binary_unix(current_exe: &Path, new_binary: &Path) -> Result<()
 }
 
 #[cfg(windows)]
-async fn replace_binary_windows(current_exe: &Path, new_binary: &Path) -> Result<()> {
-    use std::os::windows::process::CommandExt;
+fn strip_extended_length_path_prefix(path: &str) -> String {
+    // Remove the \\?\ prefix that Windows uses for extended-length paths
+    // This prefix doesn't work with batch commands like xcopy
+    if path.starts_with(r"\\?\") {
+        path[4..].to_string()
+    } else {
+        path.to_string()
+    }
+}
+
+#[cfg(windows)]
+pub async fn replace_binary_from_dir(source_dir: &Path) -> Result<()> {
     use tokio::process::Command;
 
     // On Windows, the running executable is locked. We need to use a helper script.
     // We'll use self-replace technique: spawn a detached process that waits for us to exit,
     // then replaces the binary.
 
+    let current_exe = std::env::current_exe().context("Failed to get current executable path")?;
+
+    // Resolve symlinks to get the actual binary
+    let current_exe = tokio::fs::canonicalize(&current_exe)
+        .await
+        .context("Failed to resolve current executable path")?;
+
+    // Get the installation directory
+    let install_dir = current_exe
+        .parent()
+        .context("Failed to get installation directory")?;
+
     // Create a batch script that will perform the replacement
     let temp_dir = std::env::temp_dir();
     let script_path = temp_dir.join(format!("pass-cli-update-{}.bat", std::process::id()));
 
+    // Convert paths to strings for batch script
+    // Strip the Windows extended-length path prefix (\\?\) which doesn't work with batch commands
+    let source_dir_str = strip_extended_length_path_prefix(&source_dir.to_string_lossy());
+    let install_dir_str = strip_extended_length_path_prefix(&install_dir.to_string_lossy());
+
+    let script_path_str = script_path.to_string_lossy().to_string();
+
     let script_content = format!(
-        r#"@echo off
-:wait
-timeout /t 1 /nobreak >nul
-tasklist /FI "PID eq {}" 2>nul | find "{}" >nul
-if not errorlevel 1 goto wait
-move /Y "{}" "{}"
-del "%~f0"
-"#,
-        std::process::id(),
-        std::process::id(),
-        new_binary.display(),
-        current_exe.display()
+        "@echo off\r\n\
+        :wait\r\n\
+        timeout /t 1 /nobreak >nul 2>&1\r\n\
+        tasklist /FI \"PID eq {pid}\" 2>nul | find \"{pid}\" >nul 2>&1\r\n\
+        if not errorlevel 1 goto wait\r\n\
+        xcopy /Y /E /I /Q \"{source}\\*\" \"{dest}\\\" >nul 2>&1\r\n\
+        rmdir /S /Q \"{source}\" >nul 2>&1\r\n\
+        del /F /Q \"{script}\" >nul 2>&1\r\n",
+        pid = std::process::id(),
+        source = source_dir_str,
+        dest = install_dir_str,
+        script = script_path_str
     );
 
     tokio::fs::write(&script_path, script_content)
         .await
         .context("Failed to create update script")?;
 
-    // Spawn detached process to run the script
+    // Spawn detached process to run the script without creating a visible window
+    // We use 'start /B' to run in background, and CREATE_NO_WINDOW to prevent console creation
     const CREATE_NO_WINDOW: u32 = 0x08000000;
-    const DETACHED_PROCESS: u32 = 0x00000008;
 
     Command::new("cmd")
-        .args(&["/C", "start", "/B", script_path.to_str().unwrap()])
-        .creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS)
+        .args(&["/C", "start", "/B", "cmd", "/C", &script_path_str])
+        .creation_flags(CREATE_NO_WINDOW)
         .spawn()
         .context("Failed to spawn update helper")?;
 
@@ -100,6 +127,7 @@ del "%~f0"
     Ok(())
 }
 
+#[cfg(unix)]
 fn get_backup_path(current_exe: &Path) -> PathBuf {
     let mut backup = current_exe.to_path_buf();
     let pid = std::process::id();

@@ -129,14 +129,30 @@ pub async fn run(yes: bool, set_track: Option<String>, base_dir: PathBuf) -> Res
     }
 
     println!("Downloading pass-cli v{}...", latest_version);
-    let temp_file = download::download_binary(&binary_info.url, &binary_info.hash)
-        .await
-        .context("Failed to download binary")?;
 
-    println!("Installing...");
-    replace::replace_binary(&temp_file)
-        .await
-        .context("Failed to replace binary")?;
+    #[cfg(windows)]
+    {
+        let temp_dir = download::download_and_extract_zip(&binary_info.url, &binary_info.hash)
+            .await
+            .context("Failed to download and extract update")?;
+
+        println!("Installing...");
+        replace::replace_binary_from_dir(&temp_dir)
+            .await
+            .context("Failed to replace binary")?;
+    }
+
+    #[cfg(unix)]
+    {
+        let temp_file = download::download_binary(&binary_info.url, &binary_info.hash)
+            .await
+            .context("Failed to download binary")?;
+
+        println!("Installing...");
+        replace::replace_binary(&temp_file)
+            .await
+            .context("Failed to replace binary")?;
+    }
 
     println!("Updated to v{}.", latest_version);
 

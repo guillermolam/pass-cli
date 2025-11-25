@@ -76,9 +76,11 @@ function Get-BinaryInfo {
     }
     
     # Check format version
-    if ($manifest.formatVersion -ne 1) {
-        Write-Error-Custom "Unsupported manifest format version: $($manifest.formatVersion)"
+    $formatVer = $manifest.formatVersion
+    if ($null -eq $formatVer -or $formatVer -ne 1) {
+        Write-Error-Custom "Unsupported manifest format version: $formatVer"
         Write-Error-Custom "Please upgrade your installation script or install manually."
+        Write-Error-Custom "Manifest content preview: $($manifest | ConvertTo-Json -Depth 1)"
         exit 1
     }
     
@@ -156,6 +158,22 @@ function Download-Binary {
     }
     
     Write-Info "Hash verification successful"
+
+    Write-Info "Extracting zip file..."
+    $extractDir = Join-Path ([System.IO.Path]::GetTempPath()) ("pass-cli-extract-" + [System.Guid]::NewGuid().ToString())
+
+    try {
+        Expand-Archive -Path $TempFile -DestinationPath $extractDir -Force
+        Remove-Item -Path $TempFile -Force -ErrorAction SilentlyContinue
+        return $extractDir
+    }
+    catch {
+        Write-Error-Custom "Failed to extract zip file"
+        Write-Error-Custom $_.Exception.Message
+        Remove-Item -Path $TempFile -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $extractDir -Recurse -Force -ErrorAction SilentlyContinue
+        exit 1
+    }
 }
 
 # Get install directory
@@ -171,12 +189,11 @@ function Get-InstallDir {
 
 # Install binary
 function Install-Binary {
-    param([string]$TempFile)
+    param([string]$TempFileOrDir)
     
     $installDir = Get-InstallDir
-    $targetPath = Join-Path $installDir $BINARY_NAME
     
-    Write-Info "Installing to $targetPath..."
+    Write-Info "Installing to $installDir..."
     
     # Create install directory if it doesn't exist
     if (-not (Test-Path $installDir)) {
@@ -190,18 +207,29 @@ function Install-Binary {
         }
     }
     
-    # Copy binary
-    try {
-        Copy-Item -Path $TempFile -Destination $targetPath -Force
+    # Check if it's a directory (extracted zip) or a file
+    if (Test-Path $TempFileOrDir -PathType Container) {
+        # Copy all files from extracted directory
+        try {
+            $files = Get-ChildItem -Path $TempFileOrDir -File
+            foreach ($file in $files) {
+                $targetPath = Join-Path $installDir $file.Name
+                Copy-Item -Path $file.FullName -Destination $targetPath -Force
+            }
+        }
+        catch {
+            Write-Error-Custom "Failed to install files to $installDir"
+            Write-Error-Custom $_.Exception.Message
+            exit 1
+        }
+        
+        # Clean up temp directory
+        Remove-Item -Path $TempFileOrDir -Recurse -Force -ErrorAction SilentlyContinue
     }
-    catch {
-        Write-Error-Custom "Failed to install binary to $targetPath"
-        Write-Error-Custom $_.Exception.Message
+    else {
+        Write-Error-Custom "Downloaded an invalid file"
         exit 1
     }
-    
-    # Clean up temp file
-    Remove-Item -Path $TempFile -Force -ErrorAction SilentlyContinue
 
     Write-Info "Installation complete!"
     Write-Host ""
@@ -260,21 +288,30 @@ function Main {
     # Fetch binary info from manifest
     $binaryInfo = Get-BinaryInfo -Arch $arch
     
+    # Determine file extension from URL
+    $isZip = $binaryInfo.Url -like "*.zip"
+    
     # Download binary to temp file
     $tempFile = [System.IO.Path]::GetTempFileName()
-    $tempExe = [System.IO.Path]::ChangeExtension($tempFile, ".exe")
-    Move-Item -Path $tempFile -Destination $tempExe -Force
+    if ($isZip) {
+        $tempDownload = [System.IO.Path]::ChangeExtension($tempFile, ".zip")
+    }
+    else {
+        Write-Error-Custom "Downloaded an invalid file, it should be a zip file"
+        exit 1
+    }
+    Move-Item -Path $tempFile -Destination $tempDownload -Force
     
     try {
-        Download-Binary -Url $binaryInfo.Url -ExpectedHash $binaryInfo.Hash -TempFile $tempExe
+        $extractedDir = Download-Binary -Url $binaryInfo.Url -ExpectedHash $binaryInfo.Hash -TempFile $tempDownload
         
-        # Install binary
-        Install-Binary -TempFile $tempExe
+        # Install binary (pass directory of the extracted zip)
+        Install-Binary -TempFileOrDir $extractedDir
     }
     finally {
         # Clean up temp file if it still exists
-        if (Test-Path $tempExe) {
-            Remove-Item -Path $tempExe -Force -ErrorAction SilentlyContinue
+        if (Test-Path $tempDownload) {
+            Remove-Item -Path $tempDownload -Force -ErrorAction SilentlyContinue
         }
     }
 }
