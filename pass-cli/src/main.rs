@@ -224,11 +224,13 @@ async fn main() -> Result<()> {
                 eprintln!("There was not an active session, you are already logged out");
                 Ok(())
             } else {
+                error!("Command is not logout there is no session");
                 Err(anyhow!("This operation requires an authenticated client"))
             };
         }
         Some(session) => {
             if !session.is_logged_in().await {
+                error!("Session is some but is not logged in");
                 commands::logout::cleanup().await?;
                 return Err(anyhow!("This operation requires an authenticated client"));
             }
@@ -244,6 +246,7 @@ async fn main() -> Result<()> {
                 (needs_extra_password, user_id)
             };
             if needs_extra_password {
+                error!("Session is some but needs extra password");
                 commands::logout::cleanup().await?;
                 return Err(anyhow!("This operation requires an authenticated client"));
             }

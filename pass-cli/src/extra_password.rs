@@ -39,6 +39,10 @@ async fn perform_extra_password_auth(
         srp_session_id: srp_info.srp_session_id,
     };
     send_srp_proofs(client, proofs).await?;
+    client
+        .refresh_auth()
+        .await
+        .context("Error refreshing session")?;
 
     Ok(())
 }
