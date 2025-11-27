@@ -12,7 +12,7 @@ If you still want to use the app, you will need to:
  2. Set the environment variable `PROTON_PASS_KEY_PROVIDER` to `fs`.
  3. Login normally as you would.
 
-## **On Windows it complains about `install.ps1` cannot beloaded because running scripts is disabled**
+## **On Windows it complains about `install.ps1` cannot be loaded because running scripts is disabled**
 
 It's possible that your computer has a restricted script execution policy set, either by you or via a company Device Management System.
 
