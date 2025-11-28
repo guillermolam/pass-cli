@@ -1,5 +1,6 @@
 mod check;
 mod download;
+mod install_source;
 mod manifest;
 mod platform;
 mod replace;
@@ -66,6 +67,13 @@ pub async fn run(yes: bool, set_track: Option<String>, base_dir: PathBuf) -> Res
             .await
             .context("Failed to set release track")?;
         eprintln!("Update track set to {}", track_name);
+        return Ok(());
+    }
+
+    // Check install source and provide appropriate instructions
+    let install_source = install_source::get_install_source()?;
+    if install_source != install_source::InstallSource::Standard {
+        install_source.print_instructions();
         return Ok(());
     }
 
