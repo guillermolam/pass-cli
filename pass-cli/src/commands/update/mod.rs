@@ -1,5 +1,6 @@
 mod check;
 mod download;
+mod install_source;
 mod manifest;
 mod platform;
 mod replace;
@@ -10,6 +11,7 @@ use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
 pub use check::check_for_updates_background;
+pub use install_source::{InstallSource, get_install_source};
 pub use track::get_release_track;
 
 const ENV_NO_UPDATE_CHECK: &str = "PROTON_PASS_NO_UPDATE_CHECK";
@@ -60,6 +62,13 @@ fn is_force_update_strategy() -> bool {
 }
 
 pub async fn run(yes: bool, set_track: Option<String>, base_dir: PathBuf) -> Result<()> {
+    // Check install source and provide appropriate instructions
+    let install_source = get_install_source()?;
+    if install_source != InstallSource::Standard {
+        install_source.print_instructions();
+        return Ok(());
+    }
+
     // Handle --set-track flag
     if let Some(track_name) = set_track {
         track::set_persistent_track(&base_dir, &track_name)
