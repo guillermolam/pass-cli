@@ -202,13 +202,89 @@ pub async fn run(
         }
         OutputFormat::Human => {
             for item in items {
+                let suffix = match &item.folder_id {
+                    Some(folder_id) => match client.get_folder_name(&share_id, folder_id).await {
+                        Ok(name) => format!(" [folder: {}]", name),
+                        Err(e) => {
+                            error!("Error getting folder name: {e:#}");
+                            String::new()
+                        }
+                    },
+                    None => String::new(),
+                };
                 println!(
-                    "- [{}]: {} (state={:?})",
-                    item.id, item.content.title, item.state
+                    "- [{}]: {}{} (state={:?})",
+                    item.id, item.content.title, suffix, item.state
                 );
+            }
+
+            #[cfg(feature = "internal")]
+            {
+                internal::display_folder_tree(&client, &share_id).await;
             }
         }
     }
 
     Ok(())
+}
+
+#[cfg(feature = "internal")]
+mod internal {
+    use super::*;
+    use pass_domain::Folder;
+    use std::collections::HashMap;
+
+    pub async fn display_folder_tree(client: &PassClient, share_id: &ShareId) {
+        match client.list_folders(share_id).await {
+            Ok(folders) => {
+                if !folders.is_empty() {
+                    print_folder_tree(&folders);
+                }
+            }
+            Err(e) => {
+                error!("Error listing folders: {e:#}");
+            }
+        }
+    }
+
+    fn print_folder_tree(folders: &[Folder]) {
+        // Build a map of parent_id -> children
+        let mut children_map: HashMap<Option<String>, Vec<&Folder>> = HashMap::new();
+
+        for folder in folders {
+            let parent_key = folder.parent_folder_id.as_ref().map(|id| id.to_string());
+            children_map.entry(parent_key).or_default().push(folder);
+        }
+        println!("Folders:");
+
+        // Print root folders (those with no parent)
+        if let Some(root_folders) = children_map.get(&None) {
+            for (i, folder) in root_folders.iter().enumerate() {
+                let is_last = i == root_folders.len() - 1;
+                print_folder_node(folder, "", is_last, &children_map);
+            }
+        }
+    }
+
+    fn print_folder_node(
+        folder: &Folder,
+        prefix: &str,
+        is_last: bool,
+        children_map: &HashMap<Option<String>, Vec<&Folder>>,
+    ) {
+        // Print current folder
+        let branch = if is_last { "└── " } else { "├── " };
+        println!("{}{}{}", prefix, branch, folder.content.name);
+
+        // Print children
+        let folder_key = Some(folder.id.to_string());
+        if let Some(children) = children_map.get(&folder_key) {
+            let child_prefix = format!("{}{}", prefix, if is_last { "    " } else { "│   " });
+
+            for (i, child) in children.iter().enumerate() {
+                let is_last_child = i == children.len() - 1;
+                print_folder_node(child, &child_prefix, is_last_child, children_map);
+            }
+        }
+    }
 }
