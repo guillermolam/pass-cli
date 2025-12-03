@@ -18,6 +18,8 @@ use tokio::sync::RwLock;
 
 const POLL_INTERVAL_SECONDS: u64 = 10;
 const MAX_POLL_ATTEMPTS: u32 = 60; // 60 times every 10 seconds -> 10 minutes total
+const MAX_CONSECUTIVE_FAILURES: u32 = 3;
+const FAILURE_RETRY_INTERVAL_SECONDS: u64 = 5;
 const CHILD_CLIENT_ID: &str = "cli-pass";
 
 #[derive(Debug, serde::Deserialize)]
@@ -124,13 +126,47 @@ async fn poll_session_fork(
 ) -> Result<SessionResponse> {
     info!("Starting to poll for authentication...");
 
+    let mut consecutive_failures = 0;
+
     for attempt in 1..=MAX_POLL_ATTEMPTS {
         info!("Polling attempt {}/{}", attempt, MAX_POLL_ATTEMPTS);
 
-        let res = session
+        let res = match session
             .send(GET!("/auth/sessions/forks/{selector}", selector = selector))
             .await
-            .context("Error polling session fork")?;
+        {
+            Ok(res) => res,
+            Err(e) => {
+                consecutive_failures += 1;
+                warn!(
+                    "Polling request failed (consecutive failures: {}): {}",
+                    consecutive_failures, e
+                );
+
+                if consecutive_failures >= MAX_CONSECUTIVE_FAILURES {
+                    return Err(anyhow!(
+                        "Failed to poll session fork after {} consecutive failures: {}",
+                        MAX_CONSECUTIVE_FAILURES,
+                        e
+                    ));
+                }
+
+                if attempt < MAX_POLL_ATTEMPTS {
+                    info!(
+                        "Retrying in {} seconds due to failure...",
+                        FAILURE_RETRY_INTERVAL_SECONDS
+                    );
+                    tokio::time::sleep(tokio::time::Duration::from_secs(
+                        FAILURE_RETRY_INTERVAL_SECONDS,
+                    ))
+                    .await;
+                }
+                continue;
+            }
+        };
+
+        // Request succeeded, reset failure counter
+        consecutive_failures = 0;
 
         if res.status().is_success() {
             info!("Authentication successful!");
