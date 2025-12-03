@@ -324,16 +324,19 @@ async fn execute_command(
         }
     };
 
-    // Wait for I/O handling threads to complete
+    // Wait for output handling threads to complete
     stdout_handle
         .join()
         .map_err(|_| anyhow!("Failed to join stdout thread"))?;
     stderr_handle
         .join()
         .map_err(|_| anyhow!("Failed to join stderr thread"))?;
-    stdin_handle
-        .join()
-        .map_err(|_| anyhow!("Failed to join stdin thread"))?;
+
+    // Note: We intentionally don't join stdin_handle here.
+    // The stdin thread may be blocked waiting for user input, and if the child
+    // process has already exited, we should not wait for more input.
+    // The thread will be terminated when the process exits.
+    drop(stdin_handle);
 
     Ok(exit_status.code().unwrap_or(-1))
 }
