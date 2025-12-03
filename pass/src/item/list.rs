@@ -70,6 +70,8 @@ pub(crate) struct ItemRevision {
     pub alias_email: Option<String>,
     #[serde(rename = "CreateTime")]
     pub create_time: u64,
+    #[serde(rename = "FolderID")]
+    pub folder_id: Option<String>,
 }
 
 impl PassClient {
@@ -223,6 +225,7 @@ mod tests {
                 create_time: chrono::DateTime::from_timestamp(1234567890, 0)
                     .unwrap()
                     .naive_utc(),
+                folder_id: None,
             },
             item_key: crate::item::item_keys::OpenedItemKey {
                 key_rotation: 1,
@@ -277,6 +280,7 @@ mod tests {
                 create_time: chrono::DateTime::from_timestamp(1234567890, 0)
                     .unwrap()
                     .naive_utc(),
+                folder_id: None,
             },
             item_key: crate::item::item_keys::OpenedItemKey {
                 key_rotation: 1,
@@ -335,6 +339,7 @@ mod tests {
                 create_time: chrono::DateTime::from_timestamp(1234567890, 0)
                     .unwrap()
                     .naive_utc(),
+                folder_id: None,
             },
             item_key: crate::item::item_keys::OpenedItemKey {
                 key_rotation: 1,

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use async_lock::RwLock;
 use pass_domain::{
-    AccountCrypto, ClientFeatures, DataStorage, DecryptedShareKey, FsStorage, LocalKey,
-    LocalKeyProvider, PgpCrypto, ShareId, ShareKeyStorage,
+    AccountCrypto, ClientFeatures, DataStorage, DecryptedFolderKey, DecryptedShareKey, FolderId,
+    FolderKeyStorage, FsStorage, LocalKey, LocalKeyProvider, PgpCrypto, ShareId, ShareKeyStorage,
 };
 use pass_fs::InMemoryFsStorage;
 use pass_pgp::{NativePgpCrypto, ProtonAccountCrypto};
@@ -23,9 +23,11 @@ impl LocalKeyProvider for StaticKeyProvider {
     }
 }
 
+pub type ShareKeyStorageType = HashMap<ShareId, Vec<DecryptedShareKey>>;
+
 #[derive(Clone)]
 pub struct InMemoryShareKeyStorage {
-    storage: Arc<RwLock<HashMap<ShareId, Vec<DecryptedShareKey>>>>,
+    storage: Arc<RwLock<ShareKeyStorageType>>,
 }
 
 impl InMemoryShareKeyStorage {
@@ -54,15 +56,55 @@ impl ShareKeyStorage for InMemoryShareKeyStorage {
     }
 }
 
+pub type FolderKeyStorageType = HashMap<(ShareId, FolderId), Vec<DecryptedFolderKey>>;
+
+#[derive(Clone)]
+pub struct InMemoryFolderKeyStorage {
+    storage: Arc<RwLock<FolderKeyStorageType>>,
+}
+
+impl InMemoryFolderKeyStorage {
+    pub fn new() -> Self {
+        Self {
+            storage: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl FolderKeyStorage for InMemoryFolderKeyStorage {
+    async fn get_folder_keys(
+        &self,
+        share_id: &ShareId,
+        folder_id: &FolderId,
+    ) -> Result<Option<Vec<DecryptedFolderKey>>> {
+        let storage = self.storage.read().await;
+        Ok(storage.get(&(share_id.clone(), folder_id.clone())).cloned())
+    }
+
+    async fn store_folder_keys(
+        &self,
+        share_id: &ShareId,
+        folder_id: &FolderId,
+        folder_keys: Vec<DecryptedFolderKey>,
+    ) -> Result<()> {
+        let mut storage = self.storage.write().await;
+        storage.insert((share_id.clone(), folder_id.clone()), folder_keys);
+        Ok(())
+    }
+}
+
 #[derive(Clone)]
 pub struct InMemoryDataStorage {
     share_key_storage: Arc<dyn ShareKeyStorage>,
+    folder_key_storage: Arc<dyn FolderKeyStorage>,
 }
 
 impl InMemoryDataStorage {
     pub fn new() -> Self {
         Self {
             share_key_storage: Arc::new(InMemoryShareKeyStorage::new()),
+            folder_key_storage: Arc::new(InMemoryFolderKeyStorage::new()),
         }
     }
 }
@@ -71,6 +113,10 @@ impl InMemoryDataStorage {
 impl DataStorage for InMemoryDataStorage {
     async fn get_share_key_storage(&self) -> Arc<dyn ShareKeyStorage> {
         self.share_key_storage.clone()
+    }
+
+    async fn get_folder_key_storage(&self) -> Arc<dyn FolderKeyStorage> {
+        self.folder_key_storage.clone()
     }
 }
 

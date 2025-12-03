@@ -6,7 +6,8 @@ use bytes::Bytes;
 use chrono::{DateTime, NaiveDateTime};
 use futures::stream::{self, StreamExt};
 use pass_domain::{
-    Item, ItemData, ItemFlag, ItemId, ItemState, ItemType, ShareId, ShareType, VaultId, crypto,
+    FolderId, Item, ItemData, ItemFlag, ItemId, ItemState, ItemType, ShareId, ShareType, VaultId,
+    crypto,
 };
 use std::collections::HashMap;
 
@@ -96,30 +97,44 @@ impl PassClient {
         item: &ItemRevision,
         opened_share_keys: &mut HashMap<u8, Bytes>,
     ) -> Result<OpenedItemKey> {
-        let opened_share_key = if let Some(key) = opened_share_keys.get(&item.key_rotation) {
-            key.clone()
-        } else {
-            // Use the optimized method that checks DB first before fetching from API
-            let opened_share_key = self
-                .get_opened_share_key_by_rotation(share_id, item.key_rotation)
+        // Check if item is in a folder
+        let key_for_decryption = if let Some(ref folder_id) = item.folder_id {
+            // Item is in a folder, use folder key
+            let folder_id = pass_domain::FolderId::new(folder_id.clone());
+            let folder_key = self
+                .get_opened_folder_key(share_id, &folder_id, item.key_rotation)
                 .await
-                .context("Error getting opened share key")?;
+                .context("Error getting opened folder key")?;
 
-            let opened_share_key = Bytes::from(opened_share_key.value());
-            opened_share_keys.insert(item.key_rotation, opened_share_key.clone());
-            opened_share_key
+            Bytes::from(folder_key.value())
+        } else {
+            // Item is at root level, use share key
+
+            if let Some(key) = opened_share_keys.get(&item.key_rotation) {
+                key.clone()
+            } else {
+                // Use the optimized method that checks DB first before fetching from API
+                let opened_share_key = self
+                    .get_opened_share_key_by_rotation(share_id, item.key_rotation)
+                    .await
+                    .context("Error getting opened share key")?;
+
+                let opened_share_key = Bytes::from(opened_share_key.value());
+                opened_share_keys.insert(item.key_rotation, opened_share_key.clone());
+                opened_share_key
+            }
         };
 
         // Determine if this is a VaultShare or ItemShare based on presence of item_key
         match &item.item_key {
             Some(encrypted_item_key) => {
-                // VaultShare: decrypt the item key using the opened share key
+                // VaultShare: decrypt the item key using the opened key (folder or share)
                 let encrypted_item_key = crate::utils::b64_decode(encrypted_item_key)
                     .context("Error decoding item key")?;
 
                 let decrypted_item_key = crypto::decrypt(
                     &encrypted_item_key,
-                    opened_share_key.as_ref(),
+                    key_for_decryption.as_ref(),
                     crypto::EncryptionTag::ItemKey,
                 )
                 .map_err(|e| {
@@ -130,9 +145,9 @@ impl PassClient {
                 Ok(OpenedItemKey::new(decrypted_item_key, item.key_rotation))
             }
             None => {
-                // ItemShare: the opened share key IS the item key
+                // ItemShare: the opened key IS the item key
                 Ok(OpenedItemKey::new(
-                    opened_share_key.to_vec(),
+                    key_for_decryption.to_vec(),
                     item.key_rotation,
                 ))
             }
@@ -179,6 +194,7 @@ impl PassClient {
         })?;
 
         let parsed = ItemData::deserialize(&decrypted).context("Error parsing item data")?;
+        let folder_id = item.folder_id.clone();
         Ok(vec![ItemWithItemKey {
             item: Item {
                 id: item_id,
@@ -188,6 +204,7 @@ impl PassClient {
                 vault_id,
                 flags: ItemFlag::parse_flags(item.flags),
                 create_time: timestamp_to_naive_datetime(item.create_time),
+                folder_id: folder_id.map(FolderId::new),
             },
             item_key,
         }])
@@ -267,6 +284,7 @@ impl PassClient {
                                 vault_id,
                                 flags: ItemFlag::parse_flags(item.flags),
                                 create_time: timestamp_to_naive_datetime(item.create_time),
+                                folder_id: item.folder_id.clone().map(FolderId::new),
                             },
                             item_key,
                         },
