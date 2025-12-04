@@ -2,7 +2,7 @@ use anyhow::{Context, Result, anyhow};
 use pass::PassClient;
 use pass_domain::{ItemId, ShareId};
 
-pub(crate) enum ShareQuery {
+pub enum ShareQuery {
     ShareId(ShareId),
     VaultName(String),
 }
@@ -41,7 +41,7 @@ impl ShareQuery {
     }
 }
 
-pub(crate) enum ItemQuery {
+pub enum ItemQuery {
     ItemId(ItemId),
     ItemTitle(String),
 }

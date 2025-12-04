@@ -20,6 +20,10 @@ pub mod untrash;
 pub mod update;
 pub mod view;
 
+// Re-export common types for use by other modules (used by internal folder commands)
+#[allow(unused_imports)]
+pub use common::{ItemQuery, ShareQuery};
+
 #[derive(Subcommand)]
 pub enum ItemCommands {
     #[command(about = "List items in a vault")]
