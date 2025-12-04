@@ -70,7 +70,7 @@ impl PassClient {
         let (encrypted_item_key, key_rotation) = if let Some(folder_id) = folder_id {
             // Item is in a folder, use folder key
             let folder_rev = self
-                .get_folder_revision(share_id, folder_id)
+                .get_folder_data(share_id, folder_id)
                 .await
                 .context("Error getting folder revision")?;
 

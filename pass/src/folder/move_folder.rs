@@ -29,7 +29,7 @@ impl PassClient {
     ) -> Result<()> {
         // Get the folder revision
         let folder_rev = self
-            .get_folder_revision(share_id, folder_id)
+            .get_folder_data(share_id, folder_id)
             .await
             .context("Error getting folder revision")?;
 
@@ -43,7 +43,7 @@ impl PassClient {
         let (encrypted_folder_key, key_rotation) = if let Some(ref parent_id) = new_parent_id {
             // Moving to another folder
             let parent_rev = self
-                .get_folder_revision(share_id, parent_id)
+                .get_folder_data(share_id, parent_id)
                 .await
                 .context("Error getting new parent folder")?;
 
