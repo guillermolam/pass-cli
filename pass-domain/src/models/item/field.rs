@@ -438,6 +438,7 @@ mod tests {
             create_time: chrono::DateTime::from_timestamp(1234567890, 0)
                 .unwrap()
                 .naive_utc(),
+            folder_id: None,
         }
     }
 

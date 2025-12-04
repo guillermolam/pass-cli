@@ -15,6 +15,7 @@ fn generate_pass_protos() {
 
     let files = vec![
         ("file_v1.proto", "file"),
+        ("folder_v1.proto", "folder"),
         ("item_v1.proto", "item"),
         ("vault_v1.proto", "vault"),
     ];

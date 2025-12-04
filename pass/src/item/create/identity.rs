@@ -154,6 +154,7 @@ mod tests {
                     flags: 0,
                     alias_email: None,
                     create_time: 0,
+                    folder_id: None,
                 },
             })
         });
@@ -267,6 +268,7 @@ mod tests {
                     flags: 0,
                     alias_email: None,
                     create_time: 0,
+                    folder_id: None,
                 },
             })
         });
@@ -359,6 +361,7 @@ mod tests {
                     flags: 0,
                     alias_email: None,
                     create_time: 0,
+                    folder_id: None,
                 },
             })
         });

@@ -197,6 +197,7 @@ impl ItemRevisionBuilder {
             flags: self.flags.unwrap_or(0),
             alias_email: self.alias_email.unwrap_or(None),
             create_time: self.create_time.unwrap_or(1234567890),
+            folder_id: None,
         }
     }
 }

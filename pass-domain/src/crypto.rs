@@ -15,6 +15,8 @@ pub enum EncryptionTag {
         chunk_index: usize,
         num_chunks: usize,
     },
+    FolderKey,
+    FolderContent,
     Unknown,
 }
 
@@ -33,6 +35,8 @@ impl EncryptionTag {
                 chunk_index,
                 num_chunks,
             } => format!("v2;{chunk_index};{num_chunks};filedata.item.pass.proton").into_bytes(),
+            EncryptionTag::FolderKey => b"key.folder.pass.proton".to_vec(),
+            EncryptionTag::FolderContent => b"content.folder.pass.proton".to_vec(),
         }
     }
 }

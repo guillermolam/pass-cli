@@ -3,7 +3,7 @@ mod field;
 mod flags;
 
 use crate::protos::item::item_v1;
-use crate::{ShareId, VaultId};
+use crate::{FolderId, ShareId, VaultId};
 use anyhow::{Context, Result, anyhow};
 pub use attachment::*;
 pub use field::Field;
@@ -50,6 +50,8 @@ pub struct Item {
     pub state: ItemState,
     pub flags: Vec<ItemFlag>,
     pub create_time: chrono::NaiveDateTime,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub folder_id: Option<FolderId>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -1,4 +1,5 @@
 pub(crate) mod address;
+pub(crate) mod folder;
 pub(crate) mod group;
 pub(crate) mod invite;
 pub(crate) mod item;
