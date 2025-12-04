@@ -52,7 +52,7 @@ impl PassClient {
         let migrated_item_keys = if let Some(folder_id) = target_folder_id {
             // Moving to a folder
             let folder_rev = self
-                .get_folder_revision(share_id, folder_id)
+                .get_folder_data(share_id, folder_id)
                 .await
                 .context("Error getting target folder")?;
 
