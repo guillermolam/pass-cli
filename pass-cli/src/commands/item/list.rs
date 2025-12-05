@@ -7,6 +7,17 @@ use std::str::FromStr;
 #[derive(serde::Serialize)]
 struct ItemsList {
     items: Vec<Item>,
+    #[cfg(feature = "internal")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    folders: Option<Vec<FolderInfo>>,
+}
+
+#[cfg(feature = "internal")]
+#[derive(serde::Serialize)]
+struct FolderInfo {
+    folder_id: String,
+    folder_name: String,
+    parent_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -196,7 +207,29 @@ pub async fn run(
 
     match output {
         OutputFormat::Json => {
-            let list = ItemsList { items };
+            #[cfg(feature = "internal")]
+            let folders = match client.list_folders(&share_id).await {
+                Ok(folders) => Some(
+                    folders
+                        .into_iter()
+                        .map(|f| FolderInfo {
+                            folder_id: f.id.to_string(),
+                            folder_name: f.content.name,
+                            parent_id: f.parent_folder_id.map(|id| id.to_string()),
+                        })
+                        .collect(),
+                ),
+                Err(e) => {
+                    error!("Error listing folders: {e:#}");
+                    None
+                }
+            };
+
+            let list = ItemsList {
+                items,
+                #[cfg(feature = "internal")]
+                folders,
+            };
             let json = serde_json::to_string_pretty(&list).context("Error serializing items")?;
             println!("{json}");
         }
