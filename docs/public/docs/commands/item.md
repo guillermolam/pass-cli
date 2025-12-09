@@ -24,9 +24,13 @@ pass-cli item list [VAULT_NAME] [--share-id SHARE_ID] [--output FORMAT]
 
 **Options:**
 
-- `VAULT_NAME` - Name of the vault to list items from (optional)
-- `--share-id SHARE_ID` - Share ID of the vault to list items from (optional)
+- `VAULT_NAME` - Name of the vault to list items from. Specify `VAULT_NAME` if you are not passing a `--share-id`. Used as an argument
+- `--share-id SHARE_ID` - Share ID of the vault to list items from. Specify `--share-id` if you are not passing a `VAULT_NAME`. Used as a flag
 - `--output FORMAT` - Output format: `human` (default) or `json`
+
+**Mutually exclusive options:**
+
+- `--share-id` and `VAULT_NAME` are mutually exclusive. You must provide exactly one.
 
 **Examples:**
 
