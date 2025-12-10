@@ -54,12 +54,24 @@ impl PassClient {
             .await
             .context("Error getting item key")?;
 
-        let serialized_content = new_content
-            .serialize()
-            .context("Error serializing item content")?;
+        let decoded_revision_content = crate::utils::b64_decode(&item_revision.content)
+            .context("Error decoding original item content")?;
+
+        let original_decrypted = crypto::decrypt(
+            &decoded_revision_content,
+            item_key.key.as_ref(),
+            crypto::EncryptionTag::ItemContent,
+        )
+        .map_err(|e| {
+            error!("Error decrypting original revision content: {}", e);
+            anyhow!("Error decrypting original revision content")
+        })?;
+
+        let updated_content = ItemData::perform_update(&original_decrypted, &new_content)
+            .context("Error updating item contents")?;
 
         let encrypted_content = crypto::encrypt(
-            &serialized_content,
+            &updated_content,
             item_key.key.as_ref(),
             crypto::EncryptionTag::ItemContent,
         )

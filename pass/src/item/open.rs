@@ -100,7 +100,7 @@ impl PassClient {
         // Check if item is in a folder
         let key_for_decryption = if let Some(ref folder_id) = item.folder_id {
             // Item is in a folder, use folder key
-            let folder_id = pass_domain::FolderId::new(folder_id.clone());
+            let folder_id = FolderId::new(folder_id.clone());
             let folder_key = self
                 .get_opened_folder_key(share_id, &folder_id, item.key_rotation)
                 .await
@@ -109,7 +109,6 @@ impl PassClient {
             Bytes::from(folder_key.value())
         } else {
             // Item is at root level, use share key
-
             if let Some(key) = opened_share_keys.get(&item.key_rotation) {
                 key.clone()
             } else {
