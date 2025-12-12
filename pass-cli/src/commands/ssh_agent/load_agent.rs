@@ -59,7 +59,7 @@ pub async fn run_load(
         SshAgentClient::connect(&socket_path).context("Failed to connect to SSH agent")?;
 
     info!("Connected to SSH agent, Loading SSH keys");
-    let identities = key_load::load_keys_into_storage(&client, &vault_query)
+    let identities = key_load::fetch_ssh_keys(&client, &vault_query)
         .await
         .context("Failed to load SSH keys from vaults")?;
 

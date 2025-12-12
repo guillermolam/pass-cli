@@ -1,5 +1,5 @@
 use super::VaultQuery;
-use super::key_storage::{Identity, KeyStorage};
+use super::key_storage::{Identity, IdentitySource, KeyStorage};
 use anyhow::{Context, Result, anyhow};
 use futures::stream::{self, StreamExt};
 use pass::PassClient;
@@ -248,7 +248,7 @@ fn load_and_decrypt_key(item: &Item, private_key_str: &str) -> Result<SshPrivate
     ))
 }
 
-pub async fn load_keys_into_storage(
+pub async fn fetch_ssh_keys(
     client: &PassClient,
     vault_query: &VaultQuery,
 ) -> Result<Vec<Identity>> {
@@ -265,7 +265,11 @@ pub async fn load_keys_into_storage(
     for ssh_item in ssh_key_items {
         let item = &ssh_item.item;
         match load_and_decrypt_key(item, &ssh_item.private_key) {
-            Ok(private_key) => match Identity::new(private_key, item.content.title.clone()) {
+            Ok(private_key) => match Identity::new(
+                private_key,
+                item.content.title.clone(),
+                IdentitySource::ProtonPass,
+            ) {
                 Ok(identity) => {
                     identities.push(identity);
                 }
@@ -289,7 +293,7 @@ pub async fn refresh_keys_periodically(
 ) {
     info!("Refreshing SSH keys from Proton Pass...");
 
-    match load_keys_into_storage(client, vault_query).await {
+    match fetch_ssh_keys(client, vault_query).await {
         Ok(identities) => {
             let count = identities.len();
             key_storage.replace_all_identities(identities).await;

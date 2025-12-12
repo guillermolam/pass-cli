@@ -12,7 +12,7 @@ use ssh_agent_lib::proto::{
 use ssh_key::{private::PrivateKey as SshPrivateKey, public::PublicKey as SshPublicKey};
 use std::path::PathBuf;
 
-use super::key_storage::KeyStorage;
+use super::key_storage::{IdentitySource, KeyStorage};
 use super::{Identity, VaultQuery, get_default_socket_path};
 use crate::commands::ssh_agent::key_load::refresh_keys_periodically;
 use pass::PassClient;
@@ -154,7 +154,7 @@ where
                 }
             } => {}
             _ = tokio::signal::ctrl_c() => {
-                info!("Received Ctrl+C, shutting down...");
+                eprintln!("Received Ctrl+C, shutting down...");
             }
         }
     } else {
@@ -163,7 +163,7 @@ where
                 result.context("SSH agent error")?;
             }
             _ = tokio::signal::ctrl_c() => {
-                info!("Received Ctrl+C, shutting down...");
+                eprintln!("Received Ctrl+C, shutting down...");
             }
         }
     }
@@ -311,7 +311,7 @@ impl Session for KeyStorage {
     async fn add_identity(&mut self, identity: AddIdentity) -> Result<(), AgentError> {
         if let Credential::Key { privkey, comment } = identity.credential {
             let privkey = SshPrivateKey::try_from(privkey).map_err(AgentError::other)?;
-            let identity = Identity::new(privkey, comment)
+            let identity = Identity::new(privkey, comment, IdentitySource::User)
                 .map_err(|e| std::io::Error::other(format!("Failed to create identity: {}", e)))?;
             self.identity_add(identity).await;
             Ok(())

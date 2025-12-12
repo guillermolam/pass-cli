@@ -46,4 +46,5 @@ pub use item::create::ssh_key;
 pub use item::create::wifi;
 pub use item::find::FindItemQuery;
 pub use user::access::{PassPlan, PlanType, UserDataSettings, UserInfo};
+pub use utils::is_id;
 pub use vault::{CreateVaultArgs, UpdateVaultArgs};
