@@ -119,7 +119,7 @@ export SSH_AUTH_SOCK=/Users/youruser/.ssh/proton-pass-agent.sock
 
 ### Creating new SSH key items automatically
 
-!!! info "Feature available sinc version 1.3.0"
+!!! info "Feature available since version 1.3.0"
 
 When using Proton Pass CLI as your SSH agent, you can enable automatic creation of new SSH key items. This feature is particularly useful if you want to import an existing SSH key using `ssh-add` and have it automatically stored in your Proton Pass vault.
 

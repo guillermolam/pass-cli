@@ -181,13 +181,13 @@ async fn listen_for_item_create_events(
     mut rx: UnboundedReceiver<Identity>,
 ) -> Result<()> {
     while let Some(identity) = rx.recv().await {
-        info!("Received identity item create event");
+        info!("Received SSH key item create event");
         match share_id {
             Some(ref share_id) => {
                 create_item_for_identity(&client, share_id, identity).await;
             }
             None => {
-                info!("Ignoring item create event as no target share is defined");
+                info!("Not storing the ssh key in Pass because no target share is defined");
             }
         }
     }
@@ -198,7 +198,7 @@ async fn create_item_for_identity(client: &PassClient, share_id: &ShareId, ident
     match inner_create_item_for_identity(client, share_id, identity).await {
         Ok((item_id, title)) => eprintln!("Created a new item: {title} [{item_id}]"),
         Err(e) => {
-            eprintln!("[ERROR] Failed to create new item for the new identity: {e:#}");
+            eprintln!("[ERROR] Failed to create new item for the new ssh key: {e:#}");
         }
     }
 }
