@@ -25,7 +25,7 @@ pass-cli password generate <TYPE>
 **Types:**
 
 - `random` - Generate a random password with customizable settings
-- `memorable` - Generate a memorable passphrase using words
+- `passphrase` - Generate a memorable passphrase using words
 
 #### generate random
 
@@ -55,12 +55,12 @@ pass-cli password generate random --length 20 --numbers true --uppercase true --
 pass-cli password generate random --length 16 --symbols false
 ```
 
-#### generate memorable
+#### generate passphrase
 
 Generate a memorable passphrase.
 
 ```bash
-pass-cli password generate memorable [OPTIONS]
+pass-cli password generate passphrase [OPTIONS]
 ```
 
 **Options:**
@@ -74,16 +74,16 @@ pass-cli password generate memorable [OPTIONS]
 
 ```bash
 # Generate with default settings
-pass-cli password generate memorable
+pass-cli password generate passphrase
 
 # Generate a 5-word passphrase
-pass-cli password generate memorable --words 5
+pass-cli password generate passphrase --words 5
 
 # Generate with custom separator
-pass-cli password generate memorable --words 4 --separator "-"
+pass-cli password generate passphrase --words 4 --separator "-"
 
 # Generate with numbers and capitalization
-pass-cli password generate memorable --words 4 --capitalize true --numbers true
+pass-cli password generate passphrase --words 4 --capitalize true --numbers true
 ```
 
 ### score
@@ -172,7 +172,7 @@ echo "$RANDOM_PASS"
 pass-cli password score "$RANDOM_PASS"
 
 echo -e "\n2. Memorable passphrase:"
-PASSPHRASE=$(pass-cli password generate memorable --words 5 --separator "-")
+PASSPHRASE=$(pass-cli password generate passphrase --words 5 --separator "-")
 echo "$PASSPHRASE"
 pass-cli password score "$PASSPHRASE"
 
