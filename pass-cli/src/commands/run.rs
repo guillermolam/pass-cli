@@ -1,4 +1,4 @@
-use super::secret_resolver::{PassClientResolver, SecretCache, SecretReference, find_pass_uris};
+use super::secret_resolver::{PassClientResolver, SecretCache, SecretReference, find_pass_uri};
 use crate::telemetry::event::CommandEvent;
 use anyhow::{Context, Result, anyhow, bail};
 use pass::PassClient;
@@ -92,13 +92,12 @@ fn get_environment_variables(env_files: &[String]) -> Result<Vec<EnvVar>> {
     Ok(all_vars)
 }
 
-fn find_secret_references(env_vars: &[EnvVar]) -> Result<HashMap<String, Vec<String>>> {
-    let mut secret_map: HashMap<String, Vec<String>> = HashMap::new();
+fn find_secret_references(env_vars: &[EnvVar]) -> Result<HashMap<String, String>> {
+    let mut secret_map: HashMap<String, String> = HashMap::new();
 
     for env_var in env_vars {
-        let uris = find_pass_uris(&env_var.value)?;
-        if !uris.is_empty() {
-            secret_map.insert(env_var.name.clone(), uris);
+        if let Some(uri) = find_pass_uri(&env_var.value) {
+            secret_map.insert(env_var.name.clone(), uri);
         }
     }
 
@@ -107,7 +106,7 @@ fn find_secret_references(env_vars: &[EnvVar]) -> Result<HashMap<String, Vec<Str
 
 async fn resolve_secrets_and_create_env(
     env_vars: Vec<EnvVar>,
-    secret_refs: HashMap<String, Vec<String>>,
+    secret_refs: HashMap<String, String>,
     client: PassClient,
 ) -> Result<HashMap<String, String>> {
     let resolver = PassClientResolver::new(client);
@@ -115,27 +114,25 @@ async fn resolve_secrets_and_create_env(
     let mut resolved_env: HashMap<String, String> = HashMap::new();
 
     for env_var in env_vars {
-        if let Some(uris) = secret_refs.get(&env_var.name) {
+        if let Some(value) = secret_refs.get(&env_var.name) {
             // Resolve secrets in this variable
             let mut resolved_value = env_var.value.clone();
 
-            for uri in uris {
-                let secret_ref = SecretReference::parse(uri).with_context(|| {
-                    format!("Invalid secret reference in {}: {}", env_var.name, uri)
+            let secret_ref = SecretReference::parse(value).with_context(|| {
+                format!("Invalid secret reference in {}: {}", env_var.name, value)
+            })?;
+
+            let secret_value = cache
+                .get_or_resolve(&secret_ref, &resolver)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failed to resolve secret {} in variable {}",
+                        value, env_var.name
+                    )
                 })?;
 
-                let secret_value = cache
-                    .get_or_resolve(&secret_ref, &resolver)
-                    .await
-                    .with_context(|| {
-                        format!(
-                            "Failed to resolve secret {} in variable {}",
-                            uri, env_var.name
-                        )
-                    })?;
-
-                resolved_value = resolved_value.replace(uri, &secret_value);
-            }
+            resolved_value = resolved_value.replace(value, &secret_value);
 
             resolved_env.insert(env_var.name, resolved_value);
         }
@@ -151,10 +148,7 @@ fn create_masking_regex(resolved_env: &HashMap<String, String>) -> Result<Option
     for (name, value) in resolved_env {
         // Only collect values that originally contained pass:// URIs
         let original_env_value = env::var(name).unwrap_or_default();
-        if !find_pass_uris(&original_env_value)
-            .unwrap_or_default()
-            .is_empty()
-        {
+        if find_pass_uri(&original_env_value).is_some() {
             // Escape special regex characters and add to list
             let escaped = regex::escape(value);
             if !escaped.is_empty() && escaped.len() > 3 {
@@ -440,24 +434,20 @@ QUOTED_VAR='some value'
             },
             EnvVar {
                 name: "MIXED_VAR".to_string(),
-                value: "prefix_pass://mixed/item/field_suffix".to_string(),
+                value: "prefix_pass://mixed/item/field_suffix".to_string(), // Will not be detected
             },
         ];
 
         let secret_refs = find_secret_references(&env_vars).unwrap();
 
-        assert_eq!(secret_refs.len(), 3);
+        assert_eq!(secret_refs.len(), 2);
         assert!(secret_refs.contains_key("DB_PASSWORD"));
         assert!(secret_refs.contains_key("API_KEY"));
-        assert!(secret_refs.contains_key("MIXED_VAR"));
+        assert!(!secret_refs.contains_key("MIXED_VAR"));
         assert!(!secret_refs.contains_key("NORMAL_VAR"));
 
-        assert_eq!(secret_refs["DB_PASSWORD"], vec!["pass://prod/db/password"]);
-        assert_eq!(secret_refs["API_KEY"], vec!["pass://api/service/key"]);
-        assert_eq!(
-            secret_refs["MIXED_VAR"],
-            vec!["pass://mixed/item/field_suffix"]
-        );
+        assert_eq!(secret_refs["DB_PASSWORD"], "pass://prod/db/password");
+        assert_eq!(secret_refs["API_KEY"], "pass://api/service/key");
     }
 
     #[test]

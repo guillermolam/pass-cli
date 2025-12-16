@@ -5,6 +5,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use urlencoding::decode;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ItemReference {
@@ -38,16 +39,29 @@ impl ItemReference {
             let share_id = captures
                 .get(1)
                 .ok_or_else(|| anyhow!("Missing share_id in reference"))?
-                .as_str()
-                .to_string();
+                .as_str();
 
             let item_id = captures
                 .get(2)
                 .ok_or_else(|| anyhow!("Missing item_id in reference"))?
-                .as_str()
-                .to_string();
+                .as_str();
 
-            let field_name = captures.get(3).map(|m| m.as_str().to_string());
+            let field_name = captures.get(3).map(|m| m.as_str());
+
+            // URL-decode the components
+            let share_id = decode(share_id)
+                .with_context(|| format!("Failed to URL-decode share_id: {}", share_id))?
+                .to_string();
+            let item_id = decode(item_id)
+                .with_context(|| format!("Failed to URL-decode item_id: {}", item_id))?
+                .to_string();
+            let field_name = field_name
+                .map(|f| {
+                    decode(f)
+                        .with_context(|| format!("Failed to URL-decode field_name: {}", f))
+                        .map(|s| s.to_string())
+                })
+                .transpose()?;
 
             return Ok(ItemReference {
                 share_id,
@@ -64,13 +78,19 @@ impl ItemReference {
             let share_id = captures
                 .get(1)
                 .ok_or_else(|| anyhow!("Missing share_id in reference"))?
-                .as_str()
-                .to_string();
+                .as_str();
 
             let item_id = captures
                 .get(2)
                 .ok_or_else(|| anyhow!("Missing item_id in reference"))?
-                .as_str()
+                .as_str();
+
+            // URL-decode the components
+            let share_id = decode(share_id)
+                .with_context(|| format!("Failed to URL-decode share_id: {}", share_id))?
+                .to_string();
+            let item_id = decode(item_id)
+                .with_context(|| format!("Failed to URL-decode item_id: {}", item_id))?
                 .to_string();
 
             return Ok(ItemReference {
@@ -185,13 +205,12 @@ impl SecretCache {
 }
 
 /// Finds all pass:// URIs in the given text
-pub fn find_pass_uris(text: &str) -> Result<Vec<String>> {
-    let re = Regex::new(r"pass://[^\s]+")
-        .map_err(|e| anyhow!("Failed to compile pass URI regex: {}", e))?;
+pub fn find_pass_uri(text: &str) -> Option<String> {
+    if text.starts_with("pass://") && ItemReference::parse(text).is_ok() {
+        return Some(text.to_string());
+    }
 
-    let uris: Vec<String> = re.find_iter(text).map(|m| m.as_str().to_string()).collect();
-
-    Ok(uris)
+    None
 }
 
 #[cfg(test)]
@@ -321,6 +340,60 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn item_reference_with_space_in_vault() {
+        let uri = "pass://vault 123/item456";
+        let result = ItemReference::parse(uri).expect("Failed to parse");
+        assert_eq!(result.share_id, "vault 123");
+        assert_eq!(result.item_id, "item456");
+        assert_eq!(result.field_name, None);
+    }
+
+    #[test]
+    fn item_reference_with_field_and_space_in_vault() {
+        let uri = "pass://vault 123/item456/field";
+        let result = ItemReference::parse(uri).expect("Failed to parse");
+        assert_eq!(result.share_id, "vault 123");
+        assert_eq!(result.item_id, "item456");
+        assert_eq!(result.field_name, Some("field".to_string()));
+    }
+
+    #[test]
+    fn item_reference_with_space_in_item() {
+        let uri = "pass://vault123/item 456";
+        let result = ItemReference::parse(uri).expect("Failed to parse");
+        assert_eq!(result.share_id, "vault123");
+        assert_eq!(result.item_id, "item 456");
+        assert_eq!(result.field_name, None);
+    }
+
+    #[test]
+    fn item_reference_with_field_and_space_in_item() {
+        let uri = "pass://vault123/item 456/field";
+        let result = ItemReference::parse(uri).expect("Failed to parse");
+        assert_eq!(result.share_id, "vault123");
+        assert_eq!(result.item_id, "item 456");
+        assert_eq!(result.field_name, Some("field".to_string()));
+    }
+
+    #[test]
+    fn item_reference_with_space_in_field() {
+        let uri = "pass://vault123/item456/field number one";
+        let result = ItemReference::parse(uri).expect("Failed to parse");
+        assert_eq!(result.share_id, "vault123");
+        assert_eq!(result.item_id, "item456");
+        assert_eq!(result.field_name, Some("field number one".to_string()));
+    }
+
+    #[test]
+    fn item_reference_with_spaces_in_all_components() {
+        let uri = "pass://vault 123/item 456/field number one";
+        let result = ItemReference::parse(uri).expect("Failed to parse");
+        assert_eq!(result.share_id, "vault 123");
+        assert_eq!(result.item_id, "item 456");
+        assert_eq!(result.field_name, Some("field number one".to_string()));
+    }
+
+    #[test]
     fn secret_reference_parse_valid() {
         let uri = "pass://share123/item456/password";
         let result = SecretReference::parse(uri).unwrap();
@@ -378,23 +451,6 @@ pub(crate) mod tests {
         assert_eq!(result.share_id, "My Vault");
         assert_eq!(result.item_id, "My Item");
         assert_eq!(result.field_name, "My Field");
-    }
-
-    #[test]
-    fn find_pass_uris_in_text() {
-        let text = "DB_PASSWORD=pass://prod/db/password API_KEY=pass://api/service/key";
-        let uris = find_pass_uris(text).unwrap();
-
-        assert_eq!(uris.len(), 2);
-        assert_eq!(uris[0], "pass://prod/db/password");
-        assert_eq!(uris[1], "pass://api/service/key");
-    }
-
-    #[test]
-    fn find_pass_uris_no_matches() {
-        let text = "DB_PASSWORD=secret123 API_KEY=abc123";
-        let uris = find_pass_uris(text).unwrap();
-        assert_eq!(uris.len(), 0);
     }
 
     #[tokio::test]

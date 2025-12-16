@@ -47,6 +47,7 @@ proton-pass-common.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
+tempfile = { workspace = true, optional = true}
 tracing.workspace = true
 uuid.workspace = true
 
@@ -61,5 +62,5 @@ tempfile.workspace = true
 
 [features]
 default = []
-internal = []
+internal = ["tempfile"]
 no-login-restriction = []
