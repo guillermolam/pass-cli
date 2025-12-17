@@ -1,3 +1,9 @@
+## 1.3.1 (2025-12-17)
+
+## Bug fixes :bug:
+
+- Fix `pass-cli info` command for users created with non-proton accounts
+
 ## 1.3.0 (2025-12-16)
 
 ## Features :tada:
