@@ -7,7 +7,7 @@ use pass::{
 };
 use std::io::{self, Read};
 
-use crate::commands::item::common::ShareQuery;
+use crate::commands::{item::common::ShareQuery, settings_helper};
 
 #[derive(Debug, serde::Deserialize, serde::Serialize, Default)]
 pub struct LoginTemplate {
@@ -86,12 +86,19 @@ pub struct LoginArgs {
     folder_id: Option<String>,
 }
 
-pub async fn run(args: LoginArgs, client: PassClient) -> Result<()> {
+pub async fn run(mut args: LoginArgs, client: PassClient) -> Result<()> {
     // Show help if no arguments provided
     if args.eq(&LoginArgs::default()) {
         bail!(
             "No arguments provided. Use 'pass-cli item create login --help' to see available options."
         );
+    }
+
+    // Apply default vault if both are None
+    if args.share_id.is_none() && args.vault_name.is_none() {
+        args.share_id = settings_helper::get_default_vault(&client)
+            .await?
+            .map(|id| id.to_string());
     }
 
     // Handle get-template option
@@ -104,7 +111,7 @@ pub async fn run(args: LoginArgs, client: PassClient) -> Result<()> {
 
     // Handle from-template option
     if let Some(template_source) = args.from_template {
-        let share_query = ShareQuery::new(args.share_id, args.vault_name)?;
+        let share_query = ShareQuery::new(args.share_id.clone(), args.vault_name.clone())?;
 
         let template = if template_source == "-" {
             // Read from stdin

@@ -1,6 +1,6 @@
 use crate::commands::item::list::{FilterState, FilterType, ListItemsQuery, SortBy};
-use crate::commands::{OutputFormat, Role};
-use anyhow::Result;
+use crate::commands::{OutputFormat, Role, settings_helper};
+use anyhow::{Result, anyhow};
 use clap::Subcommand;
 use pass::PassClient;
 use pass_domain::{ItemId, ShareId};
@@ -44,8 +44,8 @@ pub enum ItemCommands {
             help = "Sort items (alphabetic-asc, alphabetic-desc, created-asc, created-desc)"
         )]
         sort_by: Option<SortBy>,
-        #[arg(long, default_value = "human")]
-        output: OutputFormat,
+        #[arg(long)]
+        output: Option<OutputFormat>,
     },
     #[command(about = "Create a new item")]
     Create {
@@ -84,8 +84,8 @@ pub enum ItemCommands {
         uri: Option<String>,
         #[arg(long, help = "Specific field to view")]
         field: Option<String>,
-        #[arg(long, default_value = "human")]
-        output: OutputFormat,
+        #[arg(long)]
+        output: Option<OutputFormat>,
     },
     #[command(about = "Move an item to a different vault")]
     Move {
@@ -128,8 +128,8 @@ pub enum ItemCommands {
         uri: Option<String>,
         #[arg(long, help = "Specific TOTP field to generate code for")]
         field: Option<String>,
-        #[arg(long, default_value = "human")]
-        output: OutputFormat,
+        #[arg(long)]
+        output: Option<OutputFormat>,
     },
     #[command(about = "Move an item to trash")]
     Trash {
@@ -181,7 +181,21 @@ pub async fn run(subcommand: ItemCommands, client: PassClient) -> Result<()> {
             sort_by,
             output,
         } => {
-            let query = ListItemsQuery::new(share_id, vault_name)?;
+            let query = match (&share_id, &vault_name) {
+                (None, None) => {
+                    // Try to use default vault from settings
+                    if let Some(default_share_id) =
+                        settings_helper::get_default_vault(&client).await?
+                    {
+                        ListItemsQuery::ShareId(default_share_id)
+                    } else {
+                        return Err(anyhow!(
+                            "Please provide either --share-id, --vault-name, or set a default vault with 'pass-cli settings set default-vault'"
+                        ));
+                    }
+                }
+                _ => ListItemsQuery::new(share_id, vault_name)?,
+            };
             list::run(client, query, filter_type, filter_state, sort_by, output).await
         }
         ItemCommands::Create { create_command } => create::run(create_command, client).await,
@@ -212,6 +226,20 @@ pub async fn run(subcommand: ItemCommands, client: PassClient) -> Result<()> {
             field,
             output,
         } => {
+            // Apply default vault if both are None and URI is not provided
+            let (share_id, vault_name) = if share_id.is_none()
+                && vault_name.is_none()
+                && uri.is_none()
+            {
+                if let Some(default_share_id) = settings_helper::get_default_vault(&client).await? {
+                    (Some(default_share_id.to_string()), None)
+                } else {
+                    (None, None)
+                }
+            } else {
+                (share_id, vault_name)
+            };
+
             let query =
                 view::ViewItemQuery::new(share_id, vault_name, item_id, item_title, field, uri)?;
             view::run(client, query, output).await
@@ -224,6 +252,21 @@ pub async fn run(subcommand: ItemCommands, client: PassClient) -> Result<()> {
             to_share_id,
             to_vault_name,
         } => {
+            // Apply default vault to "from" vault if both are None
+            let (from_share_id, from_vault_name) = if from_share_id.is_none()
+                && from_vault_name.is_none()
+            {
+                if let Some(default_share_id) = settings_helper::get_default_vault(&client).await? {
+                    (Some(default_share_id.to_string()), None)
+                } else {
+                    return Err(anyhow!(
+                        "Please provide either --from-share-id, --from-vault-name, or set a default vault with 'pass-cli settings set default-vault'"
+                    ));
+                }
+            } else {
+                (from_share_id, from_vault_name)
+            };
+
             let query = r#move::MoveItemQuery::new(
                 from_share_id,
                 from_vault_name,
@@ -248,6 +291,20 @@ pub async fn run(subcommand: ItemCommands, client: PassClient) -> Result<()> {
             field,
             output,
         } => {
+            // Apply default vault if both are None and URI is not provided
+            let (share_id, vault_name) = if share_id.is_none()
+                && vault_name.is_none()
+                && uri.is_none()
+            {
+                if let Some(default_share_id) = settings_helper::get_default_vault(&client).await? {
+                    (Some(default_share_id.to_string()), None)
+                } else {
+                    (None, None)
+                }
+            } else {
+                (share_id, vault_name)
+            };
+
             let query =
                 totp::ViewTotpQuery::new(share_id, vault_name, item_id, item_title, field, uri)?;
             totp::run(client, query, output).await
@@ -258,6 +315,19 @@ pub async fn run(subcommand: ItemCommands, client: PassClient) -> Result<()> {
             item_id,
             item_title,
         } => {
+            // Apply default vault if both are None
+            let (share_id, vault_name) = if share_id.is_none() && vault_name.is_none() {
+                if let Some(default_share_id) = settings_helper::get_default_vault(&client).await? {
+                    (Some(default_share_id.to_string()), None)
+                } else {
+                    return Err(anyhow!(
+                        "Please provide either --share-id, --vault-name, or set a default vault with 'pass-cli settings set default-vault'"
+                    ));
+                }
+            } else {
+                (share_id, vault_name)
+            };
+
             let query = trash::TrashItemQuery::new(share_id, vault_name, item_id, item_title)?;
             trash::run(client, query).await
         }
@@ -267,6 +337,19 @@ pub async fn run(subcommand: ItemCommands, client: PassClient) -> Result<()> {
             item_id,
             item_title,
         } => {
+            // Apply default vault if both are None
+            let (share_id, vault_name) = if share_id.is_none() && vault_name.is_none() {
+                if let Some(default_share_id) = settings_helper::get_default_vault(&client).await? {
+                    (Some(default_share_id.to_string()), None)
+                } else {
+                    return Err(anyhow!(
+                        "Please provide either --share-id, --vault-name, or set a default vault with 'pass-cli settings set default-vault'"
+                    ));
+                }
+            } else {
+                (share_id, vault_name)
+            };
+
             let query = untrash::UntrashItemQuery::new(share_id, vault_name, item_id, item_title)?;
             untrash::run(client, query).await
         }
@@ -277,7 +360,21 @@ pub async fn run(subcommand: ItemCommands, client: PassClient) -> Result<()> {
             item_title,
             fields,
         } => {
-            let share_query = common::ShareQuery::new(share_id, vault_name)?;
+            // Apply default vault if both are None
+            let share_query = match (&share_id, &vault_name) {
+                (None, None) => {
+                    if let Some(default_share_id) =
+                        settings_helper::get_default_vault(&client).await?
+                    {
+                        common::ShareQuery::ShareId(default_share_id)
+                    } else {
+                        return Err(anyhow!(
+                            "Please provide either --share-id, --vault-name, or set a default vault with 'pass-cli settings set default-vault'"
+                        ));
+                    }
+                }
+                _ => common::ShareQuery::new(share_id, vault_name)?,
+            };
             let item_query = common::ItemQuery::new(item_id, item_title)?;
             update::run(client, share_query, item_query, fields).await
         }

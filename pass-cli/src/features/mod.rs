@@ -15,6 +15,7 @@ use std::env;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use tracing::info;
 
 const LOCAL_KEY_FILENAME: &str = "local.key";
@@ -50,6 +51,7 @@ pub struct CliClientFeatures {
     pub data_storage: Arc<dyn DataStorage>,
     pub share_key_storage: Arc<DatabaseShareKeyStorage>,
     pub folder_key_storage: Arc<DatabaseFolderKeyStorage>,
+    pub user_id: Arc<RwLock<Option<String>>>,
 
     #[allow(dead_code)]
     pub database_manager: DatabaseManager,
@@ -81,18 +83,27 @@ impl CliClientFeatures {
         Ok(Self {
             storage: Arc::new(RealFsStorage::new(base_dir.clone())),
             telemetry_handler: Arc::new(SqliteTelemetryHandler::new(db.clone())),
+            database_manager: db,
+            user_id: Arc::new(RwLock::new(None)),
             data_storage,
             share_key_storage,
             folder_key_storage,
-            database_manager: db,
             key_provider,
         })
     }
 
     pub async fn set_user_id(&self, user_id: Option<String>) {
+        {
+            let mut user_id_guard = self.user_id.write().await;
+            *user_id_guard = user_id.clone();
+        }
         self.telemetry_handler.set_user_id(user_id.clone()).await;
         self.share_key_storage.set_user_id(user_id.clone()).await;
         self.folder_key_storage.set_user_id(user_id).await;
+    }
+
+    pub async fn get_user_id(&self) -> Option<String> {
+        self.user_id.read().await.clone()
     }
 }
 

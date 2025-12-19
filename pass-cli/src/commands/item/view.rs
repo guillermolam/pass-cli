@@ -1,6 +1,6 @@
-use crate::commands::OutputFormat;
 use crate::commands::item::common::{ItemQuery, ShareQuery};
 use crate::commands::secret_resolver::ItemReference;
+use crate::commands::{OutputFormat, settings_helper};
 use crate::telemetry::event::CommandEvent;
 use anyhow::{Context, Result, anyhow, bail};
 use pass::{FindItemQuery, PassClient};
@@ -48,7 +48,19 @@ impl ViewItemQuery {
     }
 }
 
-pub async fn run(client: PassClient, query: ViewItemQuery, output: OutputFormat) -> Result<()> {
+pub async fn run(
+    client: PassClient,
+    query: ViewItemQuery,
+    output: Option<OutputFormat>,
+) -> Result<()> {
+    // Resolve output format from settings if not provided
+    let output = match output {
+        Some(fmt) => fmt,
+        None => settings_helper::get_default_format(&client)
+            .await?
+            .unwrap_or(OutputFormat::Human),
+    };
+
     let (item, effective_field) = match query {
         ViewItemQuery::Ids {
             share_query,

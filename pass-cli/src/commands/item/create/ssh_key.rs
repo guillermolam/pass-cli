@@ -5,7 +5,7 @@ use pass::ssh_key::SshKeyItemCreatePayload;
 use std::io::Read;
 use std::path::PathBuf;
 
-use crate::commands::item::common::ShareQuery;
+use crate::commands::{item::common::ShareQuery, settings_helper};
 
 const SSH_KEY_PASSWORD_ENV_VAR: &str = "PROTON_PASS_SSH_KEY_PASSWORD";
 const SSH_KEY_PASSWORD_FILE_ENV_VAR: &str = "PROTON_PASS_SSH_KEY_PASSWORD_FILE";
@@ -100,12 +100,18 @@ pub async fn run(args: SshKeyArgs, client: PassClient) -> Result<()> {
         SshKeyCommand::Import {
             private_key_file,
             password,
-            share_id,
+            mut share_id,
             vault_name,
             title,
             #[cfg(feature = "internal")]
             folder_id,
         } => {
+            // Apply default vault if both are None
+            if share_id.is_none() && vault_name.is_none() {
+                share_id = settings_helper::get_default_vault(&client)
+                    .await?
+                    .map(|id| id.to_string());
+            }
             #[cfg(feature = "internal")]
             let folder_id = folder_id
                 .as_ref()
@@ -128,12 +134,18 @@ pub async fn run(args: SshKeyArgs, client: PassClient) -> Result<()> {
             comment,
             key_type,
             password,
-            share_id,
+            mut share_id,
             vault_name,
             title,
             #[cfg(feature = "internal")]
             folder_id,
         } => {
+            // Apply default vault if both are None
+            if share_id.is_none() && vault_name.is_none() {
+                share_id = settings_helper::get_default_vault(&client)
+                    .await?
+                    .map(|id| id.to_string());
+            }
             #[cfg(feature = "internal")]
             let folder_id = folder_id
                 .as_ref()

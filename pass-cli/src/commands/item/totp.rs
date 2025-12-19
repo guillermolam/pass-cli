@@ -1,6 +1,6 @@
-use crate::commands::OutputFormat;
 use crate::commands::item::common::{ItemQuery, ShareQuery};
 use crate::commands::secret_resolver::ItemReference;
+use crate::commands::{OutputFormat, settings_helper};
 use anyhow::{Context, Result, anyhow, bail};
 use chrono::Utc;
 use pass::{FindItemQuery, PassClient};
@@ -92,7 +92,19 @@ fn generate_totp_token(totp_uri: &str) -> Result<String> {
     Ok(token)
 }
 
-pub async fn run(client: PassClient, query: ViewTotpQuery, output: OutputFormat) -> Result<()> {
+pub async fn run(
+    client: PassClient,
+    query: ViewTotpQuery,
+    output: Option<OutputFormat>,
+) -> Result<()> {
+    // Resolve output format from settings if not provided
+    let output = match output {
+        Some(fmt) => fmt,
+        None => settings_helper::get_default_format(&client)
+            .await?
+            .unwrap_or(OutputFormat::Human),
+    };
+
     let (item, effective_field) = match query {
         ViewTotpQuery::Ids {
             share_query,

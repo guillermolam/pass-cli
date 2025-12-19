@@ -6,7 +6,7 @@ use pass::custom::{
 };
 use std::io::{self, Read};
 
-use crate::commands::item::common::ShareQuery;
+use crate::commands::{item::common::ShareQuery, settings_helper};
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct CustomTemplate {
@@ -138,7 +138,14 @@ pub struct CustomArgs {
     folder_id: Option<String>,
 }
 
-pub async fn run(args: CustomArgs, client: PassClient) -> Result<()> {
+pub async fn run(mut args: CustomArgs, client: PassClient) -> Result<()> {
+    // Apply default vault if both are None
+    if args.share_id.is_none() && args.vault_name.is_none() {
+        args.share_id = settings_helper::get_default_vault(&client)
+            .await?
+            .map(|id| id.to_string());
+    }
+
     if args.get_template {
         let template = CustomTemplate::default();
         let json = serde_json::to_string_pretty(&template)

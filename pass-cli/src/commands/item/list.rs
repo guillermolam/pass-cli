@@ -1,4 +1,4 @@
-use crate::commands::OutputFormat;
+use crate::commands::{OutputFormat, settings_helper};
 use anyhow::{Context, Result, anyhow};
 use pass::PassClient;
 use pass_domain::{Item, ItemContent, ItemState, ShareId};
@@ -176,8 +176,16 @@ pub async fn run(
     filter_type: Option<FilterType>,
     filter_state: Option<FilterState>,
     sort_by: Option<SortBy>,
-    output: OutputFormat,
+    output: Option<OutputFormat>,
 ) -> Result<()> {
+    // Resolve output format from settings if not provided
+    let output = match output {
+        Some(fmt) => fmt,
+        None => settings_helper::get_default_format(&client)
+            .await?
+            .unwrap_or(OutputFormat::Human),
+    };
+
     let share_id = match query {
         ListItemsQuery::ShareId(id) => id,
         ListItemsQuery::VaultName(vault) => {

@@ -4,7 +4,7 @@ use pass::PassClient;
 use pass::note::NoteItemCreatePayload;
 use std::io::{self, Read};
 
-use crate::commands::item::common::ShareQuery;
+use crate::commands::{item::common::ShareQuery, settings_helper};
 
 #[derive(Debug, serde::Deserialize, serde::Serialize, Default)]
 pub struct NoteTemplate {
@@ -53,12 +53,19 @@ pub struct NoteArgs {
     folder_id: Option<String>,
 }
 
-pub async fn run(args: NoteArgs, client: PassClient) -> Result<()> {
+pub async fn run(mut args: NoteArgs, client: PassClient) -> Result<()> {
     // Show help if no arguments provided
     if args.eq(&NoteArgs::default()) {
         bail!(
             "No arguments provided. Use 'pass-cli item create note --help' to see available options."
         );
+    }
+
+    // Apply default vault if both are None
+    if args.share_id.is_none() && args.vault_name.is_none() {
+        args.share_id = settings_helper::get_default_vault(&client)
+            .await?
+            .map(|id| id.to_string());
     }
 
     // Handle get-template option

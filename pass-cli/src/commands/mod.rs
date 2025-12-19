@@ -13,6 +13,8 @@ pub mod logout;
 pub mod password;
 pub mod run;
 pub mod secret_resolver;
+pub mod settings;
+pub mod settings_helper;
 pub mod share;
 pub mod ssh_agent;
 pub mod support;

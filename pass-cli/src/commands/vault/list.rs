@@ -1,4 +1,4 @@
-use crate::commands::OutputFormat;
+use crate::commands::{OutputFormat, settings_helper};
 use anyhow::{Context, Result};
 use pass::PassClient;
 use pass_domain::Vault;
@@ -25,7 +25,15 @@ impl From<Vault> for VaultEntry {
     }
 }
 
-pub async fn run(client: PassClient, output: OutputFormat) -> Result<()> {
+pub async fn run(client: PassClient, output: Option<OutputFormat>) -> Result<()> {
+    // Resolve output format from settings if not provided
+    let output = match output {
+        Some(fmt) => fmt,
+        None => settings_helper::get_default_format(&client)
+            .await?
+            .unwrap_or(OutputFormat::Human),
+    };
+
     let vaults = client.list_vaults().await.context("Error listing vaults")?;
     let list = VaultList {
         vaults: vaults.into_iter().map(VaultEntry::from).collect(),

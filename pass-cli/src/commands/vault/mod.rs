@@ -45,8 +45,8 @@ mod update;
 pub enum VaultCommands {
     #[command(about = "List vaults")]
     List {
-        #[arg(long, default_value = "human")]
-        output: OutputFormat,
+        #[arg(long)]
+        output: Option<OutputFormat>,
     },
     #[command(about = "Create a new vault")]
     Create {

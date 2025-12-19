@@ -66,5 +66,19 @@ pub fn get_migrations() -> Vec<Migration> {
                     CREATE INDEX idx_folder_keys_lookup ON folder_keys(user_id, share_id, folder_id);
                 ",
         },
+        Migration {
+            id: 5,
+            description: "Create user_settings table",
+            sql: "
+                    CREATE TABLE user_settings (
+                        user_id TEXT NOT NULL,
+                        setting_key TEXT NOT NULL,
+                        setting_value TEXT,
+                        updated_at INTEGER NOT NULL,
+                        PRIMARY KEY (user_id, setting_key)
+                    );
+                    CREATE INDEX idx_user_settings_user_id ON user_settings(user_id);
+                ",
+        },
     ]
 }
