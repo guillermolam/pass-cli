@@ -124,11 +124,6 @@ enum Commands {
         #[command(subcommand)]
         command: commands::share::ShareCommands,
     },
-    #[command(about = "Manage persistent settings")]
-    Settings {
-        #[command(subcommand)]
-        command: commands::settings::SettingsCommands,
-    },
     #[command(about = "User operations")]
     User {
         #[command(subcommand)]
@@ -290,7 +285,6 @@ async fn main() -> Result<()> {
         Commands::Item { command } => commands::item::run(command, client).await,
         Commands::Invite { command } => commands::invite::run(command, client).await,
         Commands::Share { command } => commands::share::run(command, client).await,
-        Commands::Settings { command } => commands::settings::run(command, client).await,
         Commands::User { command } => commands::user::run(command, client).await,
         Commands::SshAgent { command } => commands::ssh_agent::run(command, client).await,
         #[cfg(feature = "internal")]

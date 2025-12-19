@@ -8,4 +8,4 @@ pub use activity_time::ActivityTimeModel;
 pub use folder_key::FolderKeyModel;
 pub use share_key::ShareKeyModel;
 pub use telemetry_event::TelemetryEventModel;
-pub use user_setting::UserSettingModel;
+pub use user_setting::{Setting, UserSettingModel};

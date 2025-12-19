@@ -1,9 +1,8 @@
 use crate::commands::OutputFormat;
-use crate::commands::settings::Setting;
 use crate::helpers::PassClientExt;
 use anyhow::{Context, Result};
 use pass::PassClient;
-use pass_db::UserSettingModel;
+use pass_db::{Setting, UserSettingModel};
 use pass_domain::ShareId;
 
 pub async fn get_default_share_id(client: &PassClient) -> Result<Option<ShareId>> {
@@ -35,7 +34,7 @@ async fn get_setting(client: &PassClient, setting: Setting) -> Result<Option<Str
         None => return Ok(None),
     };
 
-    let setting_model = UserSettingModel::get(&conn, &user_id, setting.key())
+    let setting_model = UserSettingModel::get(&conn, &user_id, setting)
         .await
         .context("Error getting user setting")?;
     Ok(setting_model.and_then(|s| s.setting_value))

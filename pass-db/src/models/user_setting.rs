@@ -2,6 +2,35 @@ use crate::DbConnection;
 use anyhow::Result;
 use rusqlite::{OptionalExtension, Row, params};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Setting {
+    DefaultShareId,
+    DefaultFormat,
+}
+
+impl Setting {
+    /// Returns the setting key name used in the database
+    pub fn key(&self) -> &'static str {
+        match self {
+            Setting::DefaultShareId => "default_share_id",
+            Setting::DefaultFormat => "default_format",
+        }
+    }
+
+    /// Returns the default value for this setting
+    pub fn default_value(&self) -> &'static str {
+        match self {
+            Setting::DefaultShareId => "(none)",
+            Setting::DefaultFormat => "human",
+        }
+    }
+
+    /// Returns all available settings
+    pub fn all() -> Vec<Setting> {
+        vec![Setting::DefaultShareId, Setting::DefaultFormat]
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct UserSettingModel {
     pub user_id: String,
@@ -24,11 +53,11 @@ impl UserSettingModel {
     pub async fn upsert(
         conn: &DbConnection,
         user_id: &str,
-        setting_key: &str,
+        setting: Setting,
         setting_value: Option<String>,
     ) -> Result<()> {
         let user_id = user_id.to_string();
-        let setting_key = setting_key.to_string();
+        let setting_key = setting.key().to_string();
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)?
             .as_secs() as i64;
@@ -47,10 +76,10 @@ impl UserSettingModel {
     pub async fn get(
         conn: &DbConnection,
         user_id: &str,
-        setting_key: &str,
+        setting: Setting,
     ) -> Result<Option<UserSettingModel>> {
         let user_id = user_id.to_string();
-        let setting_key = setting_key.to_string();
+        let setting_key = setting.key().to_string();
 
         conn.interact(move |conn| {
             let mut stmt = conn.prepare(
@@ -93,9 +122,9 @@ impl UserSettingModel {
     }
 
     /// Delete a specific setting (used by unset command)
-    pub async fn delete(conn: &DbConnection, user_id: &str, setting_key: &str) -> Result<usize> {
+    pub async fn delete(conn: &DbConnection, user_id: &str, setting: Setting) -> Result<usize> {
         let user_id = user_id.to_string();
-        let setting_key = setting_key.to_string();
+        let setting_key = setting.key().to_string();
 
         conn.interact(move |conn| {
             let count = conn.execute(
@@ -130,20 +159,20 @@ mod tests {
         let conn = db.get_connection().await.unwrap();
 
         let user_id = "user123";
-        let setting_key = "default_share_id";
+        let setting = Setting::DefaultShareId;
         let setting_value = Some("vault-id-123".to_string());
 
-        UserSettingModel::upsert(&conn, user_id, setting_key, setting_value.clone())
+        UserSettingModel::upsert(&conn, user_id, setting, setting_value.clone())
             .await
             .unwrap();
 
-        let retrieved = UserSettingModel::get(&conn, user_id, setting_key)
+        let retrieved = UserSettingModel::get(&conn, user_id, setting)
             .await
             .unwrap()
             .unwrap();
 
         assert_eq!(retrieved.user_id, user_id);
-        assert_eq!(retrieved.setting_key, setting_key);
+        assert_eq!(retrieved.setting_key, setting.key());
         assert_eq!(retrieved.setting_value, setting_value);
     }
 
@@ -153,27 +182,27 @@ mod tests {
         let conn = db.get_connection().await.unwrap();
 
         let user_id = "user456";
-        let setting_key = "default_format";
+        let setting = Setting::DefaultFormat;
         let value1 = Some("human".to_string());
         let value2 = Some("json".to_string());
 
         // Insert first time
-        UserSettingModel::upsert(&conn, user_id, setting_key, value1)
+        UserSettingModel::upsert(&conn, user_id, setting, value1)
             .await
             .unwrap();
 
-        let retrieved = UserSettingModel::get(&conn, user_id, setting_key)
+        let retrieved = UserSettingModel::get(&conn, user_id, setting)
             .await
             .unwrap()
             .unwrap();
         assert_eq!(retrieved.setting_value, Some("human".to_string()));
 
         // Update with new value
-        UserSettingModel::upsert(&conn, user_id, setting_key, value2)
+        UserSettingModel::upsert(&conn, user_id, setting, value2)
             .await
             .unwrap();
 
-        let retrieved = UserSettingModel::get(&conn, user_id, setting_key)
+        let retrieved = UserSettingModel::get(&conn, user_id, setting)
             .await
             .unwrap()
             .unwrap();
@@ -187,11 +216,11 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_get_nonexistent() {
+    async fn test_get_not_saved() {
         let db = test_db!();
         let conn = db.get_connection().await.unwrap();
 
-        let result = UserSettingModel::get(&conn, "nonexistent", "setting")
+        let result = UserSettingModel::get(&conn, "nonexistent", Setting::DefaultFormat)
             .await
             .unwrap();
         assert!(result.is_none());
@@ -206,17 +235,32 @@ mod tests {
         let user2 = "user2";
 
         // Insert multiple settings for user1
-        UserSettingModel::upsert(&conn, user1, "default_share_id", Some("vault1".to_string()))
-            .await
-            .unwrap();
-        UserSettingModel::upsert(&conn, user1, "default_format", Some("human".to_string()))
-            .await
-            .unwrap();
+        UserSettingModel::upsert(
+            &conn,
+            user1,
+            Setting::DefaultShareId,
+            Some("vault1".to_string()),
+        )
+        .await
+        .unwrap();
+        UserSettingModel::upsert(
+            &conn,
+            user1,
+            Setting::DefaultFormat,
+            Some("human".to_string()),
+        )
+        .await
+        .unwrap();
 
         // Insert setting for user2
-        UserSettingModel::upsert(&conn, user2, "default_share_id", Some("vault2".to_string()))
-            .await
-            .unwrap();
+        UserSettingModel::upsert(
+            &conn,
+            user2,
+            Setting::DefaultShareId,
+            Some("vault2".to_string()),
+        )
+        .await
+        .unwrap();
 
         let user1_records = UserSettingModel::get_by_user_id(&conn, user1)
             .await
@@ -236,23 +280,23 @@ mod tests {
         let conn = db.get_connection().await.unwrap();
 
         let user_id = "user789";
-        let setting_key = "test_setting";
+        let setting = Setting::DefaultShareId;
 
-        UserSettingModel::upsert(&conn, user_id, setting_key, Some("value".to_string()))
+        UserSettingModel::upsert(&conn, user_id, setting, Some("value".to_string()))
             .await
             .unwrap();
 
-        let retrieved = UserSettingModel::get(&conn, user_id, setting_key)
+        let retrieved = UserSettingModel::get(&conn, user_id, setting)
             .await
             .unwrap();
         assert!(retrieved.is_some());
 
-        let deleted_count = UserSettingModel::delete(&conn, user_id, setting_key)
+        let deleted_count = UserSettingModel::delete(&conn, user_id, setting)
             .await
             .unwrap();
         assert_eq!(deleted_count, 1);
 
-        let retrieved = UserSettingModel::get(&conn, user_id, setting_key)
+        let retrieved = UserSettingModel::get(&conn, user_id, setting)
             .await
             .unwrap();
         assert!(retrieved.is_none());
@@ -267,17 +311,32 @@ mod tests {
         let user2 = "user2";
 
         // Insert multiple settings for user1
-        UserSettingModel::upsert(&conn, user1, "setting1", Some("value1".to_string()))
-            .await
-            .unwrap();
-        UserSettingModel::upsert(&conn, user1, "setting2", Some("value2".to_string()))
-            .await
-            .unwrap();
+        UserSettingModel::upsert(
+            &conn,
+            user1,
+            Setting::DefaultShareId,
+            Some("value1".to_string()),
+        )
+        .await
+        .unwrap();
+        UserSettingModel::upsert(
+            &conn,
+            user1,
+            Setting::DefaultFormat,
+            Some("value2".to_string()),
+        )
+        .await
+        .unwrap();
 
         // Insert setting for user2
-        UserSettingModel::upsert(&conn, user2, "setting3", Some("value3".to_string()))
-            .await
-            .unwrap();
+        UserSettingModel::upsert(
+            &conn,
+            user2,
+            Setting::DefaultShareId,
+            Some("value3".to_string()),
+        )
+        .await
+        .unwrap();
 
         let deleted_count = UserSettingModel::delete_by_user_id(&conn, user1)
             .await
@@ -301,19 +360,19 @@ mod tests {
         let conn = db.get_connection().await.unwrap();
 
         let user_id = "user_null";
-        let setting_key = "nullable_setting";
+        let setting = Setting::DefaultShareId;
 
-        UserSettingModel::upsert(&conn, user_id, setting_key, None)
+        UserSettingModel::upsert(&conn, user_id, setting, None)
             .await
             .unwrap();
 
-        let retrieved = UserSettingModel::get(&conn, user_id, setting_key)
+        let retrieved = UserSettingModel::get(&conn, user_id, setting)
             .await
             .unwrap()
             .unwrap();
 
         assert_eq!(retrieved.user_id, user_id);
-        assert_eq!(retrieved.setting_key, setting_key);
+        assert_eq!(retrieved.setting_key, setting.key());
         assert_eq!(retrieved.setting_value, None);
     }
 }
