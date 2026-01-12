@@ -1,3 +1,9 @@
+## 1.3.5 (2026-01-12)
+
+## Other
+
+- Make `pass-cli info` capable of printing the output in JSON format
+
 ## 1.3.4 (2026-01-12)
 
 ## Other
