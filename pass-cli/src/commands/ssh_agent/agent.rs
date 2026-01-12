@@ -91,7 +91,7 @@ pub async fn start_agent(
         // On Windows, use a named pipe
         let pipe_name = r"\\.\pipe\openssh-ssh-agent";
 
-        info!("SSH agent listening on: {}", pipe_name);
+        eprintln!("SSH agent listening on: {}", pipe_name);
         print_agent_startup_message(&socket_path.display().to_string(), refresh_interval);
 
         let listener = NamedPipeListener::bind(&pipe_name).context("Failed to bind named pipe")?;
@@ -116,9 +116,18 @@ fn print_agent_startup_message(socket_display: &str, refresh_interval: u64) {
     eprintln!("SSH agent started successfully!");
     eprintln!("To use this agent, run:");
     #[cfg(unix)]
-    eprintln!("  export SSH_AUTH_SOCK={}", socket_display);
+    {
+        eprintln!("  export SSH_AUTH_SOCK={}", socket_display);
+    }
     #[cfg(windows)]
-    eprintln!("  $env:SSH_AUTH_SOCK = '{}'", socket_display);
+    {
+        eprintln!(
+            "  1. Open 'Services' (you can use the Windows search bar or press Win+R and enter 'services.msc'"
+        );
+        eprintln!("  2. Find 'OpenSSH Authentication Agent', right-click 'Properties'");
+        eprintln!("  3. Set 'Startup type' to Disabled, and click OK");
+        eprintln!("  4. Ensure the service status is 'Stopped'");
+    }
 
     if refresh_interval > 0 {
         eprintln!(
