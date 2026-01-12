@@ -52,7 +52,10 @@ enum Commands {
     #[command(about = "Test if the authenticated connection can be established")]
     Test,
     #[command(about = "Show information about the current session")]
-    Info,
+    Info {
+        #[arg(short, long, value_enum, help = "Output format")]
+        output: Option<commands::OutputFormat>,
+    },
     #[command(about = "Inject secrets into a file templated with secret references")]
     Inject {
         #[arg(
@@ -269,7 +272,7 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::Logout { .. } => commands::logout::run(client).await,
         Commands::Test => commands::test::run(client).await,
-        Commands::Info => commands::info::run(client, base_dir).await,
+        Commands::Info { output } => commands::info::run(client, base_dir, output).await,
         Commands::Inject {
             file_mode,
             force,
