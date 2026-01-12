@@ -32,6 +32,16 @@ It will only allow to run scripts that are signed, and the provided `install.ps1
 
 Once you have successfully installed it, you can set back the execution policy to its previous value by running back again the `Set-ExecutionPolicy` command and passing the original value you got by running `Get-ExecutionPolicy`. 
 
+## SSH Agent troubleshooting
+
+If you have issues with your SSH Agent in Proton Pass CLI, please try the following steps to see if a minimal scenario works on your setup:
+
+1. If you are using Windows, make sure that the system default OpenSSH agent is disabled. To do so, press `Windows+R`, write `services.msc`, click OK, and then look for "OpenSSH Authentication Agent". Right-click it and select "Properties". There, set "Startup type" to "Disabled" and click OK. Make sure the service is now marked as Stopped.
+2. Select a vault / Create a new temporary one to hold a new temporary SSH key.
+3. Create a new SSH key in that vault: `pass-cli item create ssh-key generate --title "TempSshKey"`.
+4. Start the SSH agent with debug logs: (macOS/Linux) `PASS_LOG_LEVEL=debug pass-cli ssh-agent start --vault-name YOUR_VAULT_NAME` / (Windows) `$env:PASS_LOG_LEVEL="debug"; pass-cli ssh-agent start --vault-name YOUR_VAULT_NAME`.
+5. Open a new shell. If you are using macOS or Linux, run the `export` command that got printed on step 4. Then run `ssh-add -L`. If everything is working correctly, you should see your `TempSshKey` listed there, and a log message appear in your SSH Agent shell.
+
 ## Contact support
 
- Head to our [support form](https://proton.me/support/contact) to get help from our fantastic support team.
+Head to our [support form](https://proton.me/support/contact) to get help from our fantastic support team.
