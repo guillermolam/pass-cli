@@ -65,9 +65,9 @@ pass-cli password generate passphrase [OPTIONS]
 
 **Options:**
 
-- `--count COUNT` - Number of words in the passphrase (default varies)
-- `--separator CHAR` - Character to separate words (default varies)
-- `--capitalize BOOL` - Capitalize words (true/false)
+- `--count COUNT` - Number of words in the passphrase (default `5`)
+- `--separator SEPARATOR` - Character to separate words (default `hyphens`)
+- `--capitalize BOOL` / `--capitalise BOOL` - Capitalize words (true/false)
 - `--numbers BOOL` - Include numbers (true/false)
 
 **Examples:**
@@ -80,7 +80,7 @@ pass-cli password generate passphrase
 pass-cli password generate passphrase --count 5
 
 # Generate with custom separator
-pass-cli password generate passphrase --count 4 --separator "-"
+pass-cli password generate passphrase --count 4 --separator hyphens
 
 # Generate with numbers and capitalization
 pass-cli password generate passphrase --count 4 --capitalize true --numbers true
@@ -172,7 +172,7 @@ echo "$RANDOM_PASS"
 pass-cli password score "$RANDOM_PASS"
 
 echo -e "\n2. Memorable passphrase:"
-PASSPHRASE=$(pass-cli password generate passphrase --count 5 --separator "-")
+PASSPHRASE=$(pass-cli password generate passphrase --count 5 --separator hyphens)
 echo "$PASSPHRASE"
 pass-cli password score "$PASSPHRASE"
 
