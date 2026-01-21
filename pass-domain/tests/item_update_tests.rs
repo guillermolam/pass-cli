@@ -191,13 +191,12 @@ fn test_perform_update_extra_fields() -> Result<()> {
     let updated_bytes = ItemData::perform_update(&original_bytes, &updated)?;
     let result = ItemData::deserialize(&updated_bytes)?;
 
-    assert_eq!(result.extra_fields.len(), 4);
+    // Fields should be replaced, not duplicated
+    assert_eq!(result.extra_fields.len(), 2);
     assert_eq!(result.extra_fields[0].name, field1_name);
-    assert_eq!(result.extra_fields[0].content, original_value1);
-    assert_eq!(result.extra_fields[1].name, field2_name);
-    assert_eq!(result.extra_fields[2].name, field1_name);
-    assert_eq!(result.extra_fields[2].content, updated_value1);
-    assert_eq!(result.extra_fields[3].name, field3_name);
+    assert_eq!(result.extra_fields[0].content, updated_value1);
+    assert_eq!(result.extra_fields[1].name, field3_name);
+    assert_eq!(result.extra_fields[1].content, value3);
 
     Ok(())
 }
@@ -562,13 +561,10 @@ fn test_perform_update_with_timestamp_extra_field() -> Result<()> {
     let result = ItemData::deserialize(&updated_bytes)?;
 
     assert_eq!(result.title, new_title);
-    assert_eq!(result.extra_fields.len(), 2);
+    // Fields should not be duplicated
+    assert_eq!(result.extra_fields.len(), 1);
     assert_eq!(
         result.extra_fields[0].content,
-        ItemExtraFieldContent::Timestamp(timestamp_value)
-    );
-    assert_eq!(
-        result.extra_fields[1].content,
         ItemExtraFieldContent::Timestamp(timestamp_value)
     );
 
@@ -595,13 +591,10 @@ fn test_perform_update_with_totp_extra_field() -> Result<()> {
     let result = ItemData::deserialize(&updated_bytes)?;
 
     assert_eq!(result.title, new_title);
-    assert_eq!(result.extra_fields.len(), 2);
+    // Fields should not be duplicated
+    assert_eq!(result.extra_fields.len(), 1);
     assert_eq!(
         result.extra_fields[0].content,
-        ItemExtraFieldContent::Totp(totp_uri.clone())
-    );
-    assert_eq!(
-        result.extra_fields[1].content,
         ItemExtraFieldContent::Totp(totp_uri)
     );
 

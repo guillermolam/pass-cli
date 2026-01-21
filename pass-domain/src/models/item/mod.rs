@@ -142,6 +142,40 @@ impl ItemData {
         let new_as_proto_serialized = new_as_proto
             .to_vec()
             .context("Error serializing item to proto")?;
+
+        // Clear repeated fields that should be replaced, not appended
+        // This prevents duplication while still preserving unknown fields from newer protobuf versions
+        original_as_proto.extra_fields.clear();
+
+        // Clear fields marked as "repeated" in content based on the content type
+        if let Some(content) = original_as_proto.content.as_mut()
+            && let Some(content_inner) = content.content.as_mut()
+        {
+            match content_inner {
+                item_v1::content::Content::Login(login_mut) => {
+                    login_mut.urls.clear();
+                    login_mut.passkeys.clear();
+                }
+                item_v1::content::Content::Custom(custom_mut) => {
+                    custom_mut.sections.clear();
+                }
+                item_v1::content::Content::Identity(identity_mut) => {
+                    identity_mut.extra_personal_details.clear();
+                    identity_mut.extra_address_details.clear();
+                    identity_mut.extra_contact_details.clear();
+                    identity_mut.extra_work_details.clear();
+                    identity_mut.extra_sections.clear();
+                }
+                item_v1::content::Content::SshKey(ssh_mut) => {
+                    ssh_mut.sections.clear();
+                }
+                item_v1::content::Content::Wifi(wifi_mut) => {
+                    wifi_mut.sections.clear();
+                }
+                _ => {}
+            }
+        }
+
         original_as_proto
             .merge_from_bytes(&new_as_proto_serialized)
             .context("Error performing item updates")?;
@@ -182,7 +216,7 @@ impl ItemData {
         }
 
         // Check if this is an existing extra field
-        for extra_field in &mut self.extra_fields {
+        for extra_field in self.extra_fields.iter_mut() {
             if extra_field.name.to_lowercase() == field_name_lower {
                 // Don't allow updating timestamp or totp fields
                 match &extra_field.content {
@@ -2294,6 +2328,158 @@ mod tests {
         );
         if let ItemContent::Login(ref login) = item.content {
             assert!(login.urls.is_empty());
+        } else {
+            panic!("Expected Login content");
+        }
+    }
+
+    #[test]
+    fn test_perform_update_does_not_duplicate_custom_fields() {
+        // Create an ItemData with CustomItem containing some fields
+        let original_item = create_test_item_data(ItemContent::Custom(CustomItem {
+            sections: vec![CustomSection {
+                section_name: "Test Section".to_string(),
+                section_fields: vec![
+                    ItemExtraField {
+                        name: "field1".to_string(),
+                        content: ItemExtraFieldContent::Text("original_value1".to_string()),
+                    },
+                    ItemExtraField {
+                        name: "field2".to_string(),
+                        content: ItemExtraFieldContent::Hidden("original_secret".to_string()),
+                    },
+                ],
+            }],
+        }));
+
+        // Serialize the original
+        let original_bytes = original_item.clone().serialize().unwrap();
+
+        // Update one of the custom fields
+        let mut updated_item = original_item.clone();
+        let result = updated_item.update_field("field1", "new_value1").unwrap();
+        assert_eq!(result, UpdateFieldResult::FieldUpdated);
+
+        // Perform the update using the perform_update method
+        let updated_bytes = ItemData::perform_update(&original_bytes, &updated_item).unwrap();
+
+        // Deserialize the result
+        let final_item = ItemData::deserialize(&updated_bytes).unwrap();
+
+        // Verify that fields are not duplicated
+        if let ItemContent::Custom(ref custom) = final_item.content {
+            assert_eq!(custom.sections.len(), 1, "Should have exactly 1 section");
+            assert_eq!(
+                custom.sections[0].section_fields.len(),
+                2,
+                "Should have exactly 2 fields, not duplicated"
+            );
+
+            // Verify the values
+            assert_eq!(custom.sections[0].section_fields[0].name, "field1");
+            assert_eq!(
+                custom.sections[0].section_fields[0].content,
+                ItemExtraFieldContent::Text("new_value1".to_string())
+            );
+            assert_eq!(custom.sections[0].section_fields[1].name, "field2");
+            assert_eq!(
+                custom.sections[0].section_fields[1].content,
+                ItemExtraFieldContent::Hidden("original_secret".to_string())
+            );
+        } else {
+            panic!("Expected Custom content");
+        }
+    }
+
+    #[test]
+    fn test_perform_update_does_not_duplicate_extra_fields() {
+        // Create an ItemData with extra fields
+        let mut original_item = create_test_item_data(ItemContent::Note(NoteItem));
+        original_item.extra_fields = vec![
+            ItemExtraField {
+                name: "extra1".to_string(),
+                content: ItemExtraFieldContent::Text("value1".to_string()),
+            },
+            ItemExtraField {
+                name: "extra2".to_string(),
+                content: ItemExtraFieldContent::Hidden("secret".to_string()),
+            },
+        ];
+
+        // Serialize the original
+        let original_bytes = original_item.clone().serialize().unwrap();
+
+        // Update one of the extra fields
+        let mut updated_item = original_item.clone();
+        let result = updated_item.update_field("extra1", "new_value1").unwrap();
+        assert_eq!(result, UpdateFieldResult::FieldUpdated);
+
+        // Perform the update using the perform_update method
+        let updated_bytes = ItemData::perform_update(&original_bytes, &updated_item).unwrap();
+
+        // Deserialize the result
+        let final_item = ItemData::deserialize(&updated_bytes).unwrap();
+
+        // Verify that extra fields are not duplicated
+        assert_eq!(
+            final_item.extra_fields.len(),
+            2,
+            "Should have exactly 2 extra fields, not duplicated"
+        );
+
+        // Verify the values
+        assert_eq!(final_item.extra_fields[0].name, "extra1");
+        assert_eq!(
+            final_item.extra_fields[0].content,
+            ItemExtraFieldContent::Text("new_value1".to_string())
+        );
+        assert_eq!(final_item.extra_fields[1].name, "extra2");
+        assert_eq!(
+            final_item.extra_fields[1].content,
+            ItemExtraFieldContent::Hidden("secret".to_string())
+        );
+    }
+
+    #[test]
+    fn test_perform_update_does_not_duplicate_login_urls() {
+        // Create an ItemData with login containing URLs
+        let original_item = create_test_item_data(ItemContent::Login(LoginItem {
+            email: "test@example.com".to_string(),
+            username: "testuser".to_string(),
+            password: "password123".to_string(),
+            urls: vec![
+                "https://example.com".to_string(),
+                "https://app.example.com".to_string(),
+            ],
+            totp_uri: "".to_string(),
+            passkeys: vec![],
+        }));
+
+        // Serialize the original
+        let original_bytes = original_item.clone().serialize().unwrap();
+
+        // Update the URLs
+        let mut updated_item = original_item.clone();
+        let result = updated_item
+            .update_field("urls", "https://new1.example.com, https://new2.example.com")
+            .unwrap();
+        assert_eq!(result, UpdateFieldResult::FieldUpdated);
+
+        // Perform the update using the perform_update method
+        let updated_bytes = ItemData::perform_update(&original_bytes, &updated_item).unwrap();
+
+        // Deserialize the result
+        let final_item = ItemData::deserialize(&updated_bytes).unwrap();
+
+        // Verify that URLs are not duplicated
+        if let ItemContent::Login(login) = final_item.content {
+            assert_eq!(
+                login.urls.len(),
+                2,
+                "Should have exactly 2 URLs, not duplicated"
+            );
+            assert_eq!(login.urls[0], "https://new1.example.com");
+            assert_eq!(login.urls[1], "https://new2.example.com");
         } else {
             panic!("Expected Login content");
         }
