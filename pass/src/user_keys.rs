@@ -2,10 +2,11 @@ use crate::PassClient;
 use anyhow::{Context, Result, anyhow};
 use muon::GET;
 use muon::rest::core::v4::keys::Key;
-use pass_domain::{LockedUserKey, UserKey};
+use pass_domain::{AccountType, LockedUserKey, UserKey};
 use std::path::Path;
 
 const USER_KEYS_FILE_NAME: &str = "user_keys.enc";
+const SERVICE_ACCOUNT_ERROR: &str = "Service accounts cannot perform user key operations";
 
 fn api_user_key_to_locked_user_key(value: Key) -> LockedUserKey {
     LockedUserKey {
@@ -35,6 +36,10 @@ struct UserKeysResponse {
 
 impl PassClient {
     pub async fn get_user_keys(&self) -> Result<Vec<UserKey>> {
+        if self.account_type() == AccountType::ServiceAccount {
+            return Err(anyhow!(SERVICE_ACCOUNT_ERROR));
+        }
+
         let client = self.clone();
         self.cache
             .update_if_no_value(UserKeysCacheType, || async move {
@@ -58,6 +63,10 @@ impl PassClient {
     }
 
     pub(crate) async fn get_primary_user_key(&self) -> Result<UserKey> {
+        if self.account_type() == AccountType::ServiceAccount {
+            return Err(anyhow!(SERVICE_ACCOUNT_ERROR));
+        }
+
         let keys = self
             .get_user_keys()
             .await
@@ -70,6 +79,10 @@ impl PassClient {
     }
 
     pub(crate) async fn load_user_keys(&self) -> Result<Vec<LockedUserKey>> {
+        if self.account_type() == AccountType::ServiceAccount {
+            return Err(anyhow!(SERVICE_ACCOUNT_ERROR));
+        }
+
         match self.load_user_keys_from_fs().await {
             Ok(keys) => {
                 if let Some(keys) = keys {

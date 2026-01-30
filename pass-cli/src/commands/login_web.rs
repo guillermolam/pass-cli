@@ -211,7 +211,10 @@ async fn create_new_client(
         .await
         .context("Error getting client")?;
 
-    Ok((PassClient::new(client, client_features), store))
+    Ok((
+        PassClient::new(client, client_features, pass_domain::AccountType::User),
+        store,
+    ))
 }
 
 pub async fn run(
@@ -271,12 +274,13 @@ pub async fn run(
             ),
         };
 
-        store
-            .write()
-            .await
+        let mut store_guard = store.write().await;
+        store_guard
             .set_auth(&(), auth)
             .await
             .context("Error setting auth")?;
+        // Set account type for regular user login
+        store_guard.set_account_type(pass_domain::AccountType::User);
     }
 
     // HACK: Create a new client to make sure we're using the right store, as the old one sometimes

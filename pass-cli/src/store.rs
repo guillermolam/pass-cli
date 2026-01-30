@@ -6,8 +6,8 @@ use muon::env::{Env, EnvId};
 use muon::store::{Store, StoreError};
 use muon::tls::{TlsCert, TlsPinSet, Verifier, VerifyRes};
 use pass::PassSessionKeyType;
-use pass_domain::LocalKeyProvider;
 use pass_domain::crypto::EncryptionTag;
+use pass_domain::{AccountType, LocalKeyProvider};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -103,6 +103,12 @@ impl From<EnvId> for SerializedEnv {
 pub struct SerializedStore {
     pub auth: Option<Auth>,
     pub env: SerializedEnv,
+    #[serde(default = "default_account_type")]
+    pub account_type: AccountType,
+}
+
+fn default_account_type() -> AccountType {
+    AccountType::User
 }
 
 #[derive(Clone)]
@@ -111,6 +117,7 @@ pub struct PassSessionStore {
     pub auth: Arc<RwLock<Option<Auth>>>,
     pub base_path: PathBuf,
     pub key_provider: Arc<dyn LocalKeyProvider>,
+    pub account_type: AccountType,
 }
 
 impl PassSessionStore {
@@ -269,7 +276,16 @@ impl PassSessionStore {
             env,
             base_path,
             key_provider,
+            account_type: AccountType::User, // Default to User for new stores
         }
+    }
+
+    pub fn set_account_type(&mut self, account_type: AccountType) {
+        self.account_type = account_type;
+    }
+
+    pub fn account_type(&self) -> AccountType {
+        self.account_type
     }
 
     pub async fn get_from_local(
@@ -335,6 +351,7 @@ impl PassSessionStore {
             auth: Arc::new(RwLock::new(deserialized.auth)),
             base_path,
             key_provider,
+            account_type: deserialized.account_type,
         }))
     }
 
@@ -344,6 +361,7 @@ impl PassSessionStore {
             SerializedStore {
                 env: SerializedEnv::from(self.env.clone()),
                 auth: auth.clone(),
+                account_type: self.account_type,
             }
         };
 

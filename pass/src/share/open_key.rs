@@ -2,7 +2,7 @@ use crate::PassClient;
 use crate::crypto::share_key::{OpenShareKeyFlow, OpenShareKeyForGroupFlow};
 use crate::share::ShareKey;
 use anyhow::{Context, Result, anyhow};
-use pass_domain::{AddressId, DecryptedShareKey, GroupId, Share, ShareId};
+use pass_domain::{AccountType, AddressId, DecryptedShareKey, GroupId, Share, ShareId};
 
 impl PassClient {
     pub(crate) async fn get_all_opened_share_keys(
@@ -150,14 +150,36 @@ impl PassClient {
     }
 
     async fn open_share_key_for_direct_share(&self, key: ShareKey) -> Result<DecryptedShareKey> {
-        let uks = self.get_user_keys().await?;
-        let pgp_crypto = self.client_features.get_pgp_crypto().await;
+        let share_key = match self.account_type() {
+            AccountType::User => {
+                let uks = self.get_user_keys().await?;
+                let pgp_crypto = self.client_features.get_pgp_crypto().await;
 
-        let flow = OpenShareKeyFlow::new(pgp_crypto, uks);
-        let share_key = flow
-            .open(key.clone())
-            .await
-            .context("failed to open ShareKey")?;
+                let flow = OpenShareKeyFlow::new(pgp_crypto, uks);
+                flow.open(key.clone())
+                    .await
+                    .context("failed to open ShareKey")?
+            }
+            AccountType::ServiceAccount => {
+                let service_account_key = self
+                    .get_local_service_account_key()
+                    .await
+                    .context("Error getting local service account key")?;
+
+                pass_domain::crypto::decrypt(
+                    key.key.as_ref(),
+                    &service_account_key,
+                    pass_domain::crypto::EncryptionTag::ShareKey,
+                )
+                .map_err(|e| {
+                    anyhow!(
+                        "Error decrypting share key with service account key: {:?}",
+                        e
+                    )
+                })?
+            }
+        };
+
         Ok(DecryptedShareKey::new(key.key_rotation, share_key))
     }
 

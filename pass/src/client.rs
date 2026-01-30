@@ -1,7 +1,7 @@
 use crate::cache::Cache;
 use anyhow::{Context, Result};
 use muon::Session;
-use pass_domain::ClientFeatures;
+use pass_domain::{AccountType, ClientFeatures};
 use std::sync::Arc;
 
 pub type PassSessionKeyType = ();
@@ -13,16 +13,26 @@ pub struct PassClient {
     pub(crate) cache: Cache,
     pub(crate) client_features: Arc<dyn ClientFeatures>,
     pub(crate) memory_xor_key: u8,
+    pub(crate) account_type: AccountType,
 }
 
 impl PassClient {
-    pub fn new(client: Client, client_features: Arc<dyn ClientFeatures>) -> Self {
+    pub fn new(
+        client: Client,
+        client_features: Arc<dyn ClientFeatures>,
+        account_type: AccountType,
+    ) -> Self {
         Self {
             client,
             client_features,
             cache: Cache::new(),
             memory_xor_key: pass_domain::crypto::generate_random_byte(),
+            account_type,
         }
+    }
+
+    pub fn account_type(&self) -> AccountType {
+        self.account_type
     }
 
     pub async fn get_key_provider(&self) -> Result<Arc<dyn pass_domain::LocalKeyProvider>> {

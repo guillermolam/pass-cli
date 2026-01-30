@@ -92,8 +92,18 @@ pub async fn run(
 
     let authenticated_client = authenticate_client(client, &username, store.clone()).await?;
 
+    // Set account type in store for regular user login
+    {
+        let mut store_guard = store.write().await;
+        store_guard.set_account_type(pass_domain::AccountType::User);
+    }
+
     info!("Logged in user: {}", username);
-    let client = PassClient::new(authenticated_client.client, client_features);
+    let client = PassClient::new(
+        authenticated_client.client,
+        client_features,
+        pass_domain::AccountType::User,
+    );
 
     let setup_key = FirstTimeSetupKey::UserPassword(authenticated_client.password);
     after_login(client, setup_key, store).await?;

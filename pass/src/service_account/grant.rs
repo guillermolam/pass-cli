@@ -79,12 +79,15 @@ impl PassClient {
             .await
             .context("Failed to get service account key")?;
 
-        let (target_type, target_id, keys) = if let Some(item_id) = item_id {
-            self.prepare_item_access_keys(share_id, item_id, &service_account_key)
-                .await?
-        } else {
-            self.prepare_vault_access_keys(share_id, &service_account_key)
-                .await?
+        let (target_type, target_id, keys) = match item_id {
+            Some(item_id) => {
+                self.prepare_item_access_keys(share_id, item_id, &service_account_key)
+                    .await?
+            }
+            None => {
+                self.prepare_vault_access_keys(share_id, &service_account_key)
+                    .await?
+            }
         };
 
         Ok(ServiceAccountGrantAccessRequest {
@@ -111,7 +114,7 @@ impl PassClient {
             .into_iter()
             .map(|k| {
                 let encrypted_key =
-                    crypto::encrypt(k.key(), service_account_key, EncryptionTag::VaultContent)
+                    crypto::encrypt(k.key(), service_account_key, EncryptionTag::ShareKey)
                         .map_err(|e| {
                             error!("Error encrypting vault key: {:?}", e);
                             anyhow!("Error encrypting vault key")
@@ -146,15 +149,12 @@ impl PassClient {
         let encrypted_keys: Vec<KeyRotationKeyPair> = opened_item_keys
             .into_iter()
             .map(|k| {
-                let encrypted_key = crypto::encrypt(
-                    &k.key.clone().value(),
-                    service_account_key,
-                    EncryptionTag::ItemKey,
-                )
-                .map_err(|e| {
-                    error!("Error encrypting item key: {:?}", e);
-                    anyhow!("Error encrypting item key")
-                })?;
+                let encrypted_key =
+                    crypto::encrypt(k.key.as_ref(), service_account_key, EncryptionTag::ShareKey)
+                        .map_err(|e| {
+                        error!("Error encrypting item key: {:?}", e);
+                        anyhow!("Error encrypting item key")
+                    })?;
 
                 Ok(KeyRotationKeyPair {
                     key: crate::utils::b64_encode(encrypted_key),
