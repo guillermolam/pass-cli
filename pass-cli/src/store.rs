@@ -383,9 +383,25 @@ impl PassSessionStore {
             }
         };
 
-        tokio::fs::write(file_path, encrypted)
-            .await
-            .context("Error writing file")?;
+        #[cfg(not(target_os = "windows"))]
+        {
+            let mut options = tokio::fs::OpenOptions::new();
+            options.write(true).create(true).truncate(true).mode(0o600);
+            let mut file = options
+                .open(&file_path)
+                .await
+                .context("Error opening file with secure permissions")?;
+            tokio::io::AsyncWriteExt::write_all(&mut file, &encrypted)
+                .await
+                .context("Error writing file")?;
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            tokio::fs::write(file_path, encrypted)
+                .await
+                .context("Error writing file")?;
+        }
 
         debug!("[STORE] Stored session");
 
