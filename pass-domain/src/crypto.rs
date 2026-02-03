@@ -95,7 +95,7 @@ pub fn decrypt(
     cipher.decrypt(nonce, payload)
 }
 
-fn random_bytes(count: usize) -> Vec<u8> {
+pub fn random_bytes(count: usize) -> Vec<u8> {
     let mut random_bytes = vec![0; count];
     //let mut rng = StdRng::from_os_rng(); // uncomment when rand=0.9
     let mut rng = rand::rng();

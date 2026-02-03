@@ -1,24 +1,26 @@
 use anyhow::{Context, Result};
 use keyring::{Entry, Error as KeyringError};
-use pass_domain::utils::xor_key;
+use pass_domain::utils::xor_key_multibyte;
 use pass_domain::{LocalKey, LocalKeyProvider};
 use std::path::PathBuf;
 use tokio::sync::RwLock;
 
 const KEYRING_SERVICE_NAME: &str = "ProtonPassCLI";
 const KEYRING_CREDENTIAL_NAME: &str = "cli-local-key";
+const XOR_KEY_LENGTH: usize = 32;
 
 pub struct KeyringKeyProvider {
     key: RwLock<Option<Vec<u8>>>,
-    xor_key: u8,
+    xor_key: Vec<u8>,
     base_dir: PathBuf,
 }
 
 impl KeyringKeyProvider {
     pub fn new(base_dir: PathBuf) -> Result<Self> {
+        let xor_key = pass_domain::crypto::random_bytes(XOR_KEY_LENGTH);
         Ok(Self {
             key: RwLock::new(None),
-            xor_key: pass_domain::crypto::generate_random_byte(),
+            xor_key,
             base_dir,
         })
     }
@@ -90,12 +92,12 @@ impl LocalKeyProvider for KeyringKeyProvider {
     async fn get_key(&self) -> Result<LocalKey> {
         let key_guard = self.key.read().await;
         if let Some(key) = &*key_guard {
-            Ok(LocalKey::new(xor_key(key, self.xor_key)))
+            Ok(LocalKey::new(xor_key_multibyte(key, &self.xor_key)))
         } else {
             drop(key_guard);
             let mut write_key_guard = self.key.write().await;
             if let Some(key) = &*write_key_guard {
-                return Ok(LocalKey::new(xor_key(key, self.xor_key)));
+                return Ok(LocalKey::new(xor_key_multibyte(key, &self.xor_key)));
             }
 
             let key = self
@@ -103,7 +105,7 @@ impl LocalKeyProvider for KeyringKeyProvider {
                 .await
                 .context("Could not get local key from keyring")?;
 
-            let xored_key = xor_key(&key, self.xor_key);
+            let xored_key = xor_key_multibyte(&key, &self.xor_key);
             *write_key_guard = Some(xored_key);
             Ok(LocalKey::new(key))
         }

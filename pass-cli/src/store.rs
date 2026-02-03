@@ -281,6 +281,20 @@ impl PassSessionStore {
             return Ok(None);
         }
 
+        match std::fs::symlink_metadata(&file_path) {
+            Ok(metadata) if metadata.is_symlink() => {
+                return Err(GetStoreError::Other(anyhow!(
+                    "Session file is a symlink, which is not allowed for security reasons"
+                )));
+            }
+            Err(e) => {
+                return Err(GetStoreError::Other(anyhow!(
+                    "Error reading file metadata: {e}"
+                )));
+            }
+            _ => {}
+        }
+
         let contents = match std::fs::read(file_path) {
             Ok(contents) => contents,
             Err(e) => return Err(GetStoreError::Other(anyhow!("Error reading file: {e}"))),
@@ -336,6 +350,20 @@ impl PassSessionStore {
         let file_path = self.base_path.join(FILE_NAME);
         debug!("[STORE] Storing session to {}", file_path.display());
 
+        if file_path.exists() {
+            match std::fs::symlink_metadata(&file_path) {
+                Ok(metadata) if metadata.is_symlink() => {
+                    return Err(anyhow!(
+                        "Session file is a symlink, which is not allowed for security reasons"
+                    ));
+                }
+                Err(e) => {
+                    return Err(anyhow!("Error reading file metadata: {e}"));
+                }
+                _ => {}
+            }
+        }
+
         let as_str = serde_json::to_string(&serialized).context("Error serializing json")?;
 
         let local_key = self
@@ -355,9 +383,25 @@ impl PassSessionStore {
             }
         };
 
-        tokio::fs::write(file_path, encrypted)
-            .await
-            .context("Error writing file")?;
+        #[cfg(not(target_os = "windows"))]
+        {
+            let mut options = tokio::fs::OpenOptions::new();
+            options.write(true).create(true).truncate(true).mode(0o600);
+            let mut file = options
+                .open(&file_path)
+                .await
+                .context("Error opening file with secure permissions")?;
+            tokio::io::AsyncWriteExt::write_all(&mut file, &encrypted)
+                .await
+                .context("Error writing file")?;
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            tokio::fs::write(file_path, encrypted)
+                .await
+                .context("Error writing file")?;
+        }
 
         debug!("[STORE] Stored session");
 

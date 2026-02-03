@@ -19,3 +19,15 @@ pub fn xor_key(key: &[u8], xor_key: u8) -> Vec<u8> {
     }
     res
 }
+
+pub fn xor_key_multibyte(key: &[u8], xor_key: &[u8]) -> Vec<u8> {
+    if xor_key.is_empty() {
+        return key.to_vec();
+    }
+
+    let mut res = Vec::with_capacity(key.len());
+    for (i, b) in key.iter().enumerate() {
+        res.push(xor_key[i % xor_key.len()] ^ b);
+    }
+    res
+}
