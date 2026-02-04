@@ -460,6 +460,10 @@ mod tests {
                 .unwrap()
                 .to_zoned(jiff::tz::TimeZone::UTC)
                 .datetime(),
+            modify_time: jiff::Timestamp::from_second(1234567890)
+                .unwrap()
+                .to_zoned(jiff::tz::TimeZone::UTC)
+                .datetime(),
             folder_id: None,
         }
     }
