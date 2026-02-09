@@ -63,7 +63,7 @@ impl PassClient {
             crypto::EncryptionTag::ItemContent,
         )
         .map_err(|e| {
-            error!("Error decrypting original revision content: {}", e);
+            error!("Error decrypting original revision content: {e:#}");
             anyhow!("Error decrypting original revision content")
         })?;
 
@@ -76,7 +76,7 @@ impl PassClient {
             crypto::EncryptionTag::ItemContent,
         )
         .map_err(|e| {
-            error!("Error encrypting item content: {e}");
+            error!("Error encrypting item content: {e:#}");
             anyhow!("Error encrypting item content")
         })?;
 

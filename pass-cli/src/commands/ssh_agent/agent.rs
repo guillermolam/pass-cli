@@ -157,7 +157,7 @@ where
     let client_clone = client.clone();
     let event_listener = tokio::spawn(async move {
         if let Err(e) = client_clone.listen_for_events(handler).await {
-            error!("Event listener error: {}", e);
+            error!("Event listener error: {e:#}");
         }
     });
 
@@ -231,7 +231,7 @@ impl Session for KeyStorage {
 
             // Decrypt the private key on-demand
             let private_key = identity.decrypt_private_key().map_err(|e| {
-                error!("Failed to decrypt private key: {}", e);
+                error!("Failed to decrypt private key: {e:#}");
                 std::io::Error::other(format!("Failed to decrypt private key: {}", e))
             })?;
 

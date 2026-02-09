@@ -132,7 +132,7 @@ impl PassClient {
             EncryptionTag::ServiceAccountName,
         )
         .map_err(|e| {
-            error!("Error decrypting service account name: {e}");
+            error!("Error decrypting service account name: {e:#}");
             anyhow!("Error decrypting service account name")
         })?;
 

@@ -396,7 +396,7 @@ impl PassClient {
             pass_domain::crypto::EncryptionTag::FolderContent,
         )
         .map_err(|e| {
-            error!("Error decrypting folder content: {e}");
+            error!("Error decrypting folder content: {e:#}");
             anyhow::anyhow!("Error decrypting folder content")
         })?;
 

@@ -128,7 +128,7 @@ impl PassSessionStore {
         }
 
         if let Err(e) = self.serialize().await {
-            error!("Error serializing auth: {:?}", e);
+            error!("Error serializing auth: {e:?}");
             Err(StoreError)
         } else {
             debug!("Session updated");

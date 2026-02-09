@@ -42,7 +42,7 @@ impl PassClient {
             crypto::EncryptionTag::FileKey,
         )
         .map_err(|e| {
-            error!("Error decrypting file key: {}", e);
+            error!("Error decrypting file key: {e:#}");
             anyhow!("Error decrypting file key")
         })?;
 
@@ -126,7 +126,7 @@ impl PassClient {
             }
         }
         .map_err(|e| {
-            error!("Error decrypting chunk data: {}", e);
+            error!("Error decrypting chunk data: {e:#}");
             anyhow!("Error decrypting chunk data")
         })?;
 

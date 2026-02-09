@@ -18,7 +18,7 @@ pub(crate) fn debug_response(res: &muon::http::HttpRes) {
             debug!("{body}");
         }
         Err(e) => {
-            error!("Cannot get HttpRes body_str: {e}");
+            error!("Cannot get HttpRes body_str: {e:#}");
         }
     }
 }

@@ -197,7 +197,7 @@ impl PassClient {
             crypto::EncryptionTag::VaultContent,
         )
         .map_err(|e| {
-            error!("Error decrypting vault data from invite: {}", e);
+            error!("Error decrypting vault data from invite: {e:#}");
             anyhow!("Error decrypting vault data invite")
         })?;
 
