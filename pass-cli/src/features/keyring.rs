@@ -26,7 +26,7 @@ impl KeyringKeyProvider {
     }
 
     fn session_exists(&self) -> bool {
-        let session_path = self.base_dir.join(crate::store::FILE_NAME);
+        let session_path = self.base_dir.join(pass_auth::store::FILE_NAME);
         session_path.exists() && session_path.is_file()
     }
 

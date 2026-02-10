@@ -1,22 +1,20 @@
 use crate::features::CliClientFeatures;
-use crate::store::{
+use crate::utils::ask_for_input;
+use anyhow::Context;
+use muon::app::AppVersion;
+use muon::common::{BoxFut, EnvProxy, Sender, SenderLayer};
+use muon::env::{Env, EnvId};
+use muon::{App, ProtonRequest, ProtonResponse};
+use pass::Client;
+use pass_auth::store::{
     AllowAllPinVerifier, CustomEnv, GetStoreError, PassSessionStore, SerializedEnv,
     SharedPassSessionStore,
 };
-use crate::utils::ask_for_input;
-use anyhow::{Context, bail};
-use muon::app::AppVersion;
-use muon::client::flow::LoginFlow;
-use muon::common::{BoxFut, EnvProxy, Sender, SenderLayer};
-use muon::env::{Env, EnvId};
-use muon::{App, GET, ProtonRequest, ProtonResponse, Session};
-use pass::{Client, PassSessionKeyType};
 use std::io::Read;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-const ENVIRONMENT_ENV_VAR: &str = "PROTON_PASS_ENVIRONMENT";
 const XDEBUG_SESSION_ENV_VAR: &str = "XDEBUG_SESSION";
 const XDEBUG_SESSION_HEADER: &str = "XDEBUG_SESSION";
 const APP_NAME: &str = "cli-pass";
@@ -55,7 +53,7 @@ impl SenderLayer<ProtonRequest, ProtonResponse> for XdebugSessionLayer {
 }
 
 fn get_env() -> SerializedEnv {
-    match std::env::var(ENVIRONMENT_ENV_VAR) {
+    match std::env::var(pass_auth::ENVIRONMENT_ENV_VAR) {
         Ok(v) => {
             if v == "atlas" {
                 SerializedEnv::Atlas(None)
@@ -69,11 +67,6 @@ fn get_env() -> SerializedEnv {
         }
         Err(_) => SerializedEnv::Prod,
     }
-}
-
-pub struct AuthenticatedClient {
-    pub client: Client,
-    pub password: String,
 }
 
 pub fn get_value(
@@ -96,7 +89,7 @@ pub fn get_value(
     }
 }
 
-fn get_password() -> anyhow::Result<String> {
+pub fn get_password() -> anyhow::Result<String> {
     get_value(
         PASSWORD_ENV_VAR,
         PASSWORD_FILE_ENV_VAR,
@@ -114,7 +107,7 @@ pub fn get_extra_password() -> anyhow::Result<String> {
     )
 }
 
-fn get_totp() -> anyhow::Result<String> {
+pub fn get_totp() -> anyhow::Result<String> {
     get_value(TOTP_ENV_VAR, TOTP_FILE_ENV_VAR, "Enter TOTP: ", false)
 }
 
@@ -125,76 +118,6 @@ pub fn get_username() -> anyhow::Result<String> {
         "Enter username: ",
         false,
     )
-}
-
-pub async fn authenticate_client(
-    client: Client,
-    username: &str,
-    store: Arc<RwLock<PassSessionStore>>,
-) -> anyhow::Result<AuthenticatedClient> {
-    let session = client
-        .new_session_without_credentials(())
-        .await
-        .context("Error creating session")?;
-    let auth = session.auth();
-    let password = get_password()?;
-    let session = match auth.login(username, &password).await {
-        LoginFlow::Ok(session, _) => session,
-
-        LoginFlow::TwoFactor(session, _) => {
-            let has_totp = session.has_totp();
-            let has_fido = session.fido_details().is_some();
-
-            match (has_totp, has_fido) {
-                (true, _) => {
-                    if has_fido {
-                        println!(
-                            "Your account has many 2FA methods available. Using TOTP. If you want to use others, use 'pass-cli login' and login via web"
-                        );
-                    }
-                    let totp = get_totp()?;
-                    session.totp(&totp).await?
-                }
-                (false, true) => {
-                    println!(
-                        "Your account cannot login interactively. Use 'pass-cli login' and login via web"
-                    );
-                    std::process::exit(1);
-                }
-                (false, false) => bail!("no 2FA available"),
-            }
-        }
-
-        LoginFlow::Failed { reason, .. } => {
-            eprintln!("Authentication failed: {reason}");
-            eprintln!("Make sure the password you entered is the right one.");
-            std::process::exit(1);
-        }
-    };
-
-    // Check if it needs extra password
-    let needs_extra_password = {
-        let store_guard = store.read().await;
-        store_guard.needs_extra_password().await
-    };
-
-    if needs_extra_password {
-        info!("Account needs Pass extra password");
-        crate::extra_password::handle_extra_password(&session).await?;
-    }
-
-    init_session(&session)
-        .await
-        .context("Error initializing session")?;
-    Ok(AuthenticatedClient { client, password })
-}
-
-pub async fn init_session(session: &Session<PassSessionKeyType>) -> anyhow::Result<()> {
-    session
-        .send(GET!("/tests/ping"))
-        .await
-        .context("Error initializing session")?;
-    Ok(())
 }
 
 fn default_app_header() -> String {

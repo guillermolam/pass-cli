@@ -260,7 +260,8 @@ impl Store<PassSessionKeyType> for SharedPassSessionStore {
     }
 }
 
-pub(crate) enum GetStoreError {
+/// Error type for loading session store
+pub enum GetStoreError {
     CannotDecrypt(anyhow::Error),
     Other(anyhow::Error),
 }
