@@ -1,4 +1,5 @@
 mod agent;
+mod debug;
 mod event_handler;
 mod event_processor;
 mod key_load;
@@ -49,6 +50,19 @@ pub enum SshAgentCommands {
         share_id: Option<String>,
         #[arg(long, help = "Name of the vault to load keys from")]
         vault_name: Option<String>,
+    },
+    #[command(about = "Debug SSH key items and show why they are or aren't usable")]
+    Debug {
+        #[arg(long, help = "Share ID of the vault to check")]
+        share_id: Option<String>,
+        #[arg(long, help = "Name of the vault to check")]
+        vault_name: Option<String>,
+        #[arg(long, help = "Item ID to check (instead of checking all items)")]
+        item_id: Option<String>,
+        #[arg(long, help = "Item title to check (instead of checking all items)")]
+        item_title: Option<String>,
+        #[arg(short, long, value_enum, help = "Output format")]
+        output: Option<crate::commands::OutputFormat>,
     },
 }
 
@@ -108,6 +122,13 @@ pub async fn run(command: SshAgentCommands, client: PassClient) -> Result<()> {
             share_id,
             vault_name,
         } => load_agent::run_load(share_id, vault_name, client).await,
+        SshAgentCommands::Debug {
+            share_id,
+            vault_name,
+            item_id,
+            item_title,
+            output,
+        } => debug::run_debug(share_id, vault_name, item_id, item_title, output, client).await,
     }
 }
 
