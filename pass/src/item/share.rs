@@ -1,4 +1,5 @@
 use crate::PassClient;
+use crate::permission::PermissionAction;
 use anyhow::Context;
 use pass_domain::{ItemId, ShareId, ShareRole};
 
@@ -10,6 +11,8 @@ impl PassClient {
         email: &str,
         role: &ShareRole,
     ) -> anyhow::Result<()> {
+        self.action_guard(PermissionAction::ShareVault).await?;
+
         let request = self
             .create_invites_request(share_id, email, role, Some(item_id.clone()))
             .await

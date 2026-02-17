@@ -63,7 +63,7 @@ impl PassClient {
             crypto::EncryptionTag::ItemContent,
         )
         .map_err(|e| {
-            error!("Error encrypting item contents: {e}");
+            error!("Error encrypting item contents: {e:#}");
             anyhow!("Error encrypting item contents")
         })?;
 
@@ -86,7 +86,7 @@ impl PassClient {
                 crypto::EncryptionTag::ItemKey,
             )
             .map_err(|e| {
-                error!("Error encrypting item key with folder key: {e}");
+                error!("Error encrypting item key with folder key: {e:#}");
                 anyhow!("Error encrypting item key with folder key")
             })?;
 
@@ -112,7 +112,7 @@ impl PassClient {
                 crypto::EncryptionTag::ItemKey,
             )
             .map_err(|e| {
-                error!("Error encrypting item key: {e}");
+                error!("Error encrypting item key: {e:#}");
                 anyhow!("Error encrypting item key")
             })?;
 

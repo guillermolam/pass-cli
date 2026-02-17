@@ -8,14 +8,14 @@ use pass::PassClient;
 use std::sync::Arc;
 use zeroizing_alloc::ZeroAlloc;
 
+mod auth;
 mod client;
 mod commands;
-mod extra_password;
+mod constants;
 mod features;
 mod helpers;
 mod logs;
 mod storage;
-mod store;
 mod telemetry;
 mod utils;
 
@@ -42,6 +42,10 @@ enum Commands {
 
         #[arg(long, help = "Use interactive login mode")]
         interactive: bool,
+
+        #[cfg(feature = "internal")]
+        #[arg(long, help = "Service account token (format: ppsa_<token>::<key>)")]
+        service_account: Option<String>,
     },
 
     #[command(about = "Log out of the current session")]
@@ -205,7 +209,30 @@ async fn main() -> Result<()> {
         Commands::Login {
             username,
             interactive,
+            ..
         } => {
+            #[cfg(feature = "internal")]
+            {
+                // Extract service_account field when feature is enabled
+                if let Commands::Login {
+                    service_account, ..
+                } = &cli.command
+                {
+                    // Route to service account login if --service-account is provided
+                    use crate::auth::cli_credential_provider::SERVICE_ACCOUNT_ENV_VAR;
+
+                    if service_account.is_some() || std::env::var(SERVICE_ACCOUNT_ENV_VAR).is_ok() {
+                        return commands::login_service_account::run(
+                            service_account.clone(),
+                            client,
+                            client_features,
+                            store,
+                        )
+                        .await;
+                    }
+                }
+            }
+
             return commands::login::run(
                 username.as_deref(),
                 *interactive,
@@ -231,7 +258,7 @@ async fn main() -> Result<()> {
     };
 
     let session = client.get_session(()).await;
-    let user_id = match session {
+    let (user_id, account_type) = match session {
         None => {
             return if cli.command.is_logout() {
                 eprintln!("There was not an active session, you are already logged out");
@@ -247,28 +274,30 @@ async fn main() -> Result<()> {
                 commands::logout::cleanup().await?;
                 return Err(anyhow!("This operation requires an authenticated client"));
             }
-            // Check if session needs extra password
-            let (needs_extra_password, user_id) = {
+            // Check if session needs extra password and get account type
+            let (needs_extra_password, user_id, account_type) = {
                 let store_guard = store.read().await;
                 let needs_extra_password = store_guard.needs_extra_password().await;
                 let auth = store_guard.auth.read().await;
                 let user_id = auth
                     .clone()
                     .and_then(|a| a.user_id().map(|u| u.to_string()));
+                let account_type = store_guard.account_type();
 
-                (needs_extra_password, user_id)
+                (needs_extra_password, user_id, account_type)
             };
             if needs_extra_password {
                 error!("Session is some but needs extra password");
                 commands::logout::cleanup().await?;
                 return Err(anyhow!("This operation requires an authenticated client"));
             }
-            user_id
+            (user_id, account_type)
         }
     };
 
     client_features.set_user_id(user_id.clone()).await;
-    let client = PassClient::new(client, client_features.clone());
+    info!("Creating client with AccountType: {account_type:?}");
+    let client = PassClient::new(client, client_features.clone(), account_type);
     client_features
         .telemetry_handler
         .send_telemetry_if_needed(user_id, &client)

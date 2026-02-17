@@ -1,6 +1,6 @@
 use crate::{PassClient, PassPlan, PlanType};
 use anyhow::{Context, Result, anyhow};
-use pass_domain::{ItemContent, ItemId, PermissionFlag, ShareId, ShareType};
+use pass_domain::{AccountType, ItemContent, ItemId, PermissionFlag, ShareId, ShareType};
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -18,11 +18,24 @@ pub enum PermissionAction {
     CreateCreditCard { share_id: ShareId },
     CreateCustomItem { share_id: ShareId },
     CreateWifi { share_id: ShareId },
+
+    // Service account restricted operations
+    ShareVault,
+    AcceptInvite,
+    RejectInvite,
+    ListInvites,
 }
 
 display_for_enum!(PermissionAction);
 
 impl PassClient {
+    pub(crate) fn not_service_account_guard(&self) -> Result<()> {
+        if self.account_type() == AccountType::ServiceAccount {
+            return Err(anyhow!("Service accounts cannot perform this operation"));
+        }
+        Ok(())
+    }
+
     pub(crate) async fn action_guard(&self, action: PermissionAction) -> Result<()> {
         let user_access = self
             .get_user_access()
@@ -30,9 +43,15 @@ impl PassClient {
             .context("Error getting user access data")?;
 
         match action {
-            PermissionAction::CreateVault => self.create_vault_guard(user_access.plan).await,
+            PermissionAction::CreateVault => {
+                self.not_service_account_guard()?;
+                self.create_vault_guard(user_access.plan).await
+            }
             PermissionAction::UpdateVault { share_id } => self.update_vault_guard(share_id).await,
-            PermissionAction::DeleteVault { share_id } => self.delete_vault_guard(share_id).await,
+            PermissionAction::DeleteVault { share_id } => {
+                self.not_service_account_guard()?;
+                self.delete_vault_guard(share_id).await
+            }
             PermissionAction::CreateItem { share_id } => self.create_item_guard(share_id).await,
             PermissionAction::UpdateItem { share_id, item_id } => {
                 self.update_item_guard(share_id, item_id).await
@@ -60,6 +79,10 @@ impl PassClient {
                 self.create_item_guard(share_id).await?;
                 self.create_paid_item_guard(user_access.plan).await
             }
+            PermissionAction::ShareVault => self.not_service_account_guard(),
+            PermissionAction::AcceptInvite => self.not_service_account_guard(),
+            PermissionAction::RejectInvite => self.not_service_account_guard(),
+            PermissionAction::ListInvites => self.not_service_account_guard(),
         }
     }
 

@@ -4,6 +4,7 @@ use crate::invite::list::{
     EncryptedInviteKey, InviteKey, InviteKeyResponse, InviteWithKeys, OpenedInviteKey,
     PendingInviteVaultData,
 };
+use crate::permission::PermissionAction;
 use anyhow::{Context, Result, anyhow};
 use muon::GET;
 use pass_domain::{GroupId, Invite, InviteId, InviteVaultData, TargetType, VaultData};
@@ -42,6 +43,8 @@ struct GetGroupInvitesResponse {
 
 impl PassClient {
     pub async fn list_group_invites(&self) -> Result<Vec<InviteWithKeys>> {
+        self.action_guard(PermissionAction::ListInvites).await?;
+
         let res = self
             .send(GET!("/pass/v1/invite/group"))
             .await

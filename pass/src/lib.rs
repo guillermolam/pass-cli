@@ -14,6 +14,7 @@ mod client;
 mod common;
 mod constants;
 mod crypto;
+mod error;
 mod events;
 mod feature_flags;
 mod first_time_setup;
@@ -27,6 +28,7 @@ mod pagination;
 pub mod password;
 mod permission;
 mod ping;
+mod service_account;
 mod share;
 mod telemetry;
 mod user;
@@ -46,6 +48,10 @@ pub use item::create::note;
 pub use item::create::ssh_key;
 pub use item::create::wifi;
 pub use item::find::FindItemQuery;
+pub use service_account::{
+    CreateServiceAccountArgs, CreateServiceAccountResponse, ServiceAccount, ServiceAccountAccess,
+    UpdateServiceAccountArgs,
+};
 pub use user::access::{PassPlan, PlanType, UserDataSettings, UserInfo};
 pub use utils::is_id;
 pub use vault::{CreateVaultArgs, UpdateVaultArgs};

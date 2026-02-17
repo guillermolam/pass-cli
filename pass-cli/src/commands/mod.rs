@@ -8,7 +8,8 @@ pub mod internal;
 pub mod invite;
 pub mod item;
 pub mod login;
-pub mod login_web;
+#[cfg(feature = "internal")]
+pub mod login_service_account;
 pub mod logout;
 pub mod password;
 pub mod run;

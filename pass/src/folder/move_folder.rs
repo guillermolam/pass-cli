@@ -58,7 +58,7 @@ impl PassClient {
                 crypto::EncryptionTag::FolderKey,
             )
             .map_err(|e| {
-                error!("Error encrypting folder key with new parent key: {e}");
+                error!("Error encrypting folder key with new parent key: {e:#}");
                 anyhow!("Error encrypting folder key with new parent key")
             })?;
 
@@ -84,7 +84,7 @@ impl PassClient {
                 crypto::EncryptionTag::FolderKey,
             )
             .map_err(|e| {
-                error!("Error encrypting folder key with share key: {e}");
+                error!("Error encrypting folder key with share key: {e:#}");
                 anyhow!("Error encrypting folder key with share key")
             })?;
 

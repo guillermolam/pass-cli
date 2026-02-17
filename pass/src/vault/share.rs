@@ -1,5 +1,6 @@
 use crate::PassClient;
 use crate::invite::create::{CreateInvitesRequest, InviteRequest, NewUserInvitesRequest};
+use crate::permission::PermissionAction;
 use anyhow::{Context, Result, anyhow};
 use muon::POST;
 use pass_domain::{ShareId, ShareRole};
@@ -19,6 +20,8 @@ impl PassClient {
         email: &str,
         role: &ShareRole,
     ) -> Result<()> {
+        self.action_guard(PermissionAction::ShareVault).await?;
+
         let request = self
             .create_invites_request(share_id, email, role, None)
             .await

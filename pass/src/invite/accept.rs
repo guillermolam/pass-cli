@@ -2,6 +2,7 @@ use crate::PassClient;
 use crate::common::CodeResponse;
 use crate::crypto::reencrypt_invite_keys::{InviteKeyToReencrypt, ReencryptInviteKeysFlow};
 use crate::invite::list::InviteWithKeys;
+use crate::permission::PermissionAction;
 use anyhow::{Context, Result};
 use muon::POST;
 use pass_domain::InviteId;
@@ -22,6 +23,8 @@ pub(crate) struct AcceptInviteKey {
 
 impl PassClient {
     pub async fn accept_invite(&self, invite_id: &InviteId) -> Result<()> {
+        self.action_guard(PermissionAction::AcceptInvite).await?;
+
         let invites = self
             .list_user_invites()
             .await

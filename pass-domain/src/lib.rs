@@ -39,12 +39,14 @@ macro_rules! implement_custom_methods {
 pub use aes_gcm;
 pub use feature_flag::*;
 pub use features::*;
+pub use models::account_type::*;
 pub use models::address::*;
 pub use models::events::*;
 pub use models::folder::*;
 pub use models::group::*;
 pub use models::invite::*;
 pub use models::item::*;
+pub use models::service_account::*;
 pub use models::share::*;
 pub use models::vault::*;
 pub use protobuf;

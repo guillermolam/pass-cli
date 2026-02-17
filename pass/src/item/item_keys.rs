@@ -213,7 +213,7 @@ impl PassClient {
                 crypto::EncryptionTag::ItemKey,
             )
             .map_err(|e| {
-                error!("Error decrypting item key: {}", e);
+                error!("Error decrypting item key: {e:#}");
                 anyhow!("Error decrypting item key")
             })?;
 

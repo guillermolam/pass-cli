@@ -13,6 +13,12 @@ impl EncryptedShareKey {
     }
 }
 
+impl AsRef<[u8]> for EncryptedShareKey {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, ZeroizeOnDrop)]
 pub struct ShareKey {
     pub key_rotation: u8,

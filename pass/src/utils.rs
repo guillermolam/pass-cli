@@ -1,3 +1,4 @@
+use crate::error::{ProtonApiError, ProtonApiErrorCode};
 use anyhow::Context;
 use base64::Engine;
 
@@ -17,11 +18,15 @@ pub(crate) fn debug_response(res: &muon::http::HttpRes) {
             debug!("{body}");
         }
         Err(e) => {
-            error!("Cannot get HttpRes body_str: {e}");
+            error!("Cannot get HttpRes body_str: {e:#}");
         }
     }
 }
 
 pub fn is_id(value: &str) -> bool {
     value.len() == 88 && value.ends_with("==")
+}
+
+pub(crate) fn extract_proton_code(res: &muon::http::HttpRes) -> Option<ProtonApiErrorCode> {
+    res.body_json::<ProtonApiError>().ok().map(|c| c.code)
 }

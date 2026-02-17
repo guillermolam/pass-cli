@@ -37,7 +37,14 @@ macro_rules! assert_response {
     ($res:expr) => {{
         if !$res.status().is_success() {
             $crate::utils::debug_response(&$res);
-            return Err(anyhow::anyhow!("Invalid status code: {}", $res.status()));
+            return if let Some(c) = $crate::utils::extract_proton_code(&$res) {
+                Err(anyhow::anyhow!(
+                    "Could not perform operation. Reason: {}",
+                    c.name()
+                ))
+            } else {
+                Err(anyhow::anyhow!("Invalid status code: {}", $res.status()))
+            };
         }
 
         match $res.body_json() {

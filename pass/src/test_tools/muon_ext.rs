@@ -95,7 +95,11 @@ impl MuonServerExt for Arc<Server> {
             .await
             .expect("Error creating session");
         init_session(self, session).await;
-        PassClient::new(client, Arc::new(TestClientFeatures::new(key)))
+        PassClient::new(
+            client,
+            Arc::new(TestClientFeatures::new(key)),
+            pass_domain::AccountType::User,
+        )
     }
 }
 

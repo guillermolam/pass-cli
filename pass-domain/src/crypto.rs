@@ -17,6 +17,9 @@ pub enum EncryptionTag {
     },
     FolderKey,
     FolderContent,
+    ShareKey,
+    ServiceAccountName,
+    ServiceAccountKey,
     Unknown,
 }
 
@@ -37,6 +40,9 @@ impl EncryptionTag {
             } => format!("v2;{chunk_index};{num_chunks};filedata.item.pass.proton").into_bytes(),
             EncryptionTag::FolderKey => b"key.folder.pass.proton".to_vec(),
             EncryptionTag::FolderContent => b"content.folder.pass.proton".to_vec(),
+            EncryptionTag::ShareKey => b"sharekey".to_vec(),
+            EncryptionTag::ServiceAccountName => b"proton.pass.service_account.name".to_vec(),
+            EncryptionTag::ServiceAccountKey => b"proton.pass.service_account.key".to_vec(),
         }
     }
 }
@@ -167,6 +173,17 @@ mod tests {
             let key = generate_encryption_key();
             let invalid_ciphertext = b"short";
             assert!(decrypt(invalid_ciphertext, &key, EncryptionTag::VaultContent).is_err());
+        }
+
+        #[test]
+        fn test_service_account_name_encryption() {
+            let key = generate_encryption_key();
+            let data = b"MyServiceAccountName";
+            let ciphertext =
+                encrypt(data, &key, EncryptionTag::ServiceAccountName).expect("encryption failed");
+            let plaintext = decrypt(&ciphertext, &key, EncryptionTag::ServiceAccountName)
+                .expect("decryption failed");
+            assert_eq!(data.to_vec(), plaintext);
         }
     }
 }

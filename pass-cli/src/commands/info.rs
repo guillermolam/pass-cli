@@ -3,6 +3,7 @@ use crate::commands::{OutputFormat, settings_helper, update};
 use crate::telemetry::event::CommandEvent;
 use anyhow::{Context, Result};
 use pass::PassClient;
+use pass_domain::AccountType;
 use std::path::PathBuf;
 
 #[derive(serde::Serialize)]
@@ -11,8 +12,12 @@ struct InfoOutput {
     pub env: Option<String>,
     pub release_track: String,
     pub id: String,
-    pub username: String,
-    pub email: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub service_account_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub install_source: Option<String>,
 }
@@ -32,35 +37,70 @@ pub async fn run(
             .unwrap_or(OutputFormat::Human),
     };
 
-    let info = client.get_info().await.context("Error getting user info")?;
+    let info_output = match client.account_type() {
+        AccountType::User => {
+            let info = client.get_info().await.context("Error getting user info")?;
 
-    // Only show ENV if it's not "prod"
-    let env_str = format!("{:?}", info.env);
-    let env = if env_str != "Prod" {
-        Some(env_str)
-    } else {
-        None
-    };
+            // Only show ENV if it's not "prod"
+            let env_str = format!("{:?}", info.env);
+            let env = if env_str != "Prod" {
+                Some(env_str)
+            } else {
+                None
+            };
 
-    // Show release track
-    let release_track = update::get_release_track(&base_dir)
-        .await
-        .unwrap_or_else(|_| "stable".to_string());
+            // Show release track
+            let release_track = update::get_release_track(&base_dir)
+                .await
+                .unwrap_or_else(|_| "stable".to_string());
 
-    let install_source = update::get_install_source()?;
-    let install_source_str = if install_source != InstallSource::Standard {
-        Some(format!("{:?}", install_source))
-    } else {
-        None
-    };
+            let install_source = update::get_install_source()?;
+            let install_source_str = if install_source != InstallSource::Standard {
+                Some(format!("{:?}", install_source))
+            } else {
+                None
+            };
 
-    let info_output = InfoOutput {
-        env,
-        release_track,
-        id: info.user.id,
-        username: info.user.name,
-        email: info.user.email,
-        install_source: install_source_str,
+            InfoOutput {
+                env,
+                release_track,
+                id: info.user.id,
+                username: Some(info.user.name),
+                email: Some(info.user.email),
+                service_account_name: None,
+                install_source: install_source_str,
+            }
+        }
+        AccountType::ServiceAccount => {
+            let service_account_name = client
+                .get_service_account_name()
+                .await
+                .context("Error getting service account name")?;
+
+            let env = None; // Service accounts might not have env info
+
+            // Show release track
+            let release_track = update::get_release_track(&base_dir)
+                .await
+                .unwrap_or_else(|_| "stable".to_string());
+
+            let install_source = update::get_install_source()?;
+            let install_source_str = if install_source != InstallSource::Standard {
+                Some(format!("{:?}", install_source))
+            } else {
+                None
+            };
+
+            InfoOutput {
+                env,
+                release_track,
+                id: "N/A".to_string(), // Service accounts don't have user IDs
+                username: None,
+                email: None,
+                service_account_name: Some(service_account_name),
+                install_source: install_source_str,
+            }
+        }
     };
 
     print(info_output, output).context("Error printing info")?;
@@ -75,9 +115,17 @@ fn print(info: InfoOutput, output: OutputFormat) -> Result<()> {
                 println!("- ENV: {}", env);
             }
             println!("- Release track: {}", info.release_track);
-            println!("- ID: {}", info.id);
-            println!("- Username: {}", info.username);
-            println!("- Email: {}", info.email);
+            if let Some(service_account_name) = &info.service_account_name {
+                println!("- Service Account: {}", service_account_name);
+            } else {
+                println!("- ID: {}", info.id);
+                if let Some(username) = &info.username {
+                    println!("- Username: {}", username);
+                }
+                if let Some(email) = &info.email {
+                    println!("- Email: {}", email);
+                }
+            }
             if let Some(install_source) = &info.install_source {
                 println!("- Install source: {}", install_source);
             }

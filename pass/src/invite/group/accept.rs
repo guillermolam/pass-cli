@@ -5,12 +5,15 @@ use crate::crypto::reencrypt_group_invite_keys::{
 };
 use crate::invite::accept::{AcceptInviteKey, AcceptInviteRequest};
 use crate::invite::list::InviteWithKeys;
+use crate::permission::PermissionAction;
 use anyhow::{Context, Result};
 use muon::POST;
 use pass_domain::InviteId;
 
 impl PassClient {
     pub async fn accept_group_invite(&self, invite_id: &InviteId) -> Result<()> {
+        self.action_guard(PermissionAction::AcceptInvite).await?;
+
         let invites = self
             .list_group_invites()
             .await

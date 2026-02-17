@@ -137,7 +137,7 @@ impl PassClient {
                     crypto::EncryptionTag::ItemKey,
                 )
                 .map_err(|e| {
-                    error!("Error decrypting item key: {}", e);
+                    error!("Error decrypting item key: {e:#}");
                     anyhow!("Error decrypting item key")
                 })?;
 
@@ -188,7 +188,7 @@ impl PassClient {
             crypto::EncryptionTag::ItemContent,
         )
         .map_err(|e| {
-            error!("Error decrypting item content: {}", e);
+            error!("Error decrypting item content: {e:#}");
             anyhow!("Error decrypting item content")
         })?;
 
@@ -234,7 +234,7 @@ impl PassClient {
                     let item_key = match client.get_item_key(&share_id, &item).await {
                         Ok(key) => key,
                         Err(e) => {
-                            error!("Error getting item key for item {}: {}", item.item_id, e);
+                            error!("Error getting item key for item {}: {:#}", item.item_id, e);
                             return None;
                         }
                     };
@@ -243,7 +243,7 @@ impl PassClient {
                         Ok(content) => content,
                         Err(e) => {
                             error!(
-                                "Error decoding item content for item {}: {}",
+                                "Error decoding item content for item {}: {:#}",
                                 item.item_id, e
                             );
                             return None;
@@ -268,7 +268,7 @@ impl PassClient {
                     let parsed = match ItemData::deserialize(&decrypted) {
                         Ok(data) => data,
                         Err(e) => {
-                            error!("Error parsing item data for item {}: {}", item.item_id, e);
+                            error!("Error parsing item data for item {}: {:#}", item.item_id, e);
                             return None;
                         }
                     };

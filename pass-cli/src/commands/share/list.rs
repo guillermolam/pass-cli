@@ -84,7 +84,7 @@ async fn adapt_shares(client: PassClient, shares: Vec<Share>) -> Result<Vec<Shar
                 let name = match content {
                     Ok(content) => content.name,
                     Err(e) => {
-                        error!("Error opening vault share content: {}", e);
+                        error!("Error opening vault share content: {e:#}");
                         "ERROR".to_string()
                     }
                 };

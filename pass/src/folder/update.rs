@@ -52,7 +52,7 @@ impl PassClient {
             crypto::EncryptionTag::FolderContent,
         )
         .map_err(|e| {
-            error!("Error encrypting folder content: {e}");
+            error!("Error encrypting folder content: {e:#}");
             anyhow!("Error encrypting folder content")
         })?;
 

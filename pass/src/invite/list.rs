@@ -1,5 +1,6 @@
 use crate::PassClient;
 use crate::crypto::open_invite_key::OpenInviteKeyFlow;
+use crate::permission::PermissionAction;
 use anyhow::{Context, Result, anyhow};
 use muon::GET;
 use pass_domain::{Invite, InviteId, InviteVaultData, TargetType, VaultData, crypto};
@@ -83,6 +84,8 @@ pub struct InviteWithKeys {
 
 impl PassClient {
     pub async fn list_user_invites(&self) -> Result<Vec<InviteWithKeys>> {
+        self.action_guard(PermissionAction::ListInvites).await?;
+
         let res = self
             .send(GET!("/pass/v1/invite"))
             .await
@@ -194,7 +197,7 @@ impl PassClient {
             crypto::EncryptionTag::VaultContent,
         )
         .map_err(|e| {
-            error!("Error decrypting vault data from invite: {}", e);
+            error!("Error decrypting vault data from invite: {e:#}");
             anyhow!("Error decrypting vault data invite")
         })?;
 

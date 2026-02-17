@@ -123,7 +123,7 @@ impl PassClient {
                 crypto::EncryptionTag::ItemKey,
             )
             .map_err(|e| {
-                error!("Error encrypting item key: {e}");
+                error!("Error encrypting item key: {e:#}");
                 anyhow!("Error encrypting item key")
             })?;
 

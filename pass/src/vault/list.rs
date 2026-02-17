@@ -54,7 +54,7 @@ impl PassClient {
                             },
                         )),
                         Err(e) => {
-                            error!("Error opening share {}: {}", share_id, e);
+                            error!("Error opening share {}: {:#}", share_id, e);
                             None
                         }
                     }

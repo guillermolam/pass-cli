@@ -122,7 +122,7 @@ impl PassClient {
             crypto::EncryptionTag::VaultContent,
         )
         .map_err(|e| {
-            error!("Error encrypting vault: {}", e);
+            error!("Error encrypting vault: {e:#}");
             anyhow::anyhow!("Error encrypting vault")
         })?;
 
