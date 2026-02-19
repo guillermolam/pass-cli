@@ -3311,7 +3311,7 @@ dependencies = [
 
 [[package]]
 name = "pass"
-version = "1.5.0"
+version = "1.5.1"
 dependencies = [
  "anyhow",
  "async-lock",
@@ -3335,7 +3335,7 @@ dependencies = [
 
 [[package]]
 name = "pass-auth"
-version = "1.5.0"
+version = "1.5.1"
 dependencies = [
  "aes",
  "anyhow",
@@ -3357,7 +3357,7 @@ dependencies = [
 
 [[package]]
 name = "pass-cli"
-version = "1.5.0"
+version = "1.5.1"
 dependencies = [
  "aes",
  "anyhow",
@@ -3411,7 +3411,7 @@ dependencies = [
 
 [[package]]
 name = "pass-db"
-version = "1.5.0"
+version = "1.5.1"
 dependencies = [
  "anyhow",
  "deadpool",
@@ -3426,7 +3426,7 @@ dependencies = [
 
 [[package]]
 name = "pass-domain"
-version = "1.5.0"
+version = "1.5.1"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -3444,7 +3444,7 @@ dependencies = [
 
 [[package]]
 name = "pass-fs"
-version = "1.5.0"
+version = "1.5.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3454,7 +3454,7 @@ dependencies = [
 
 [[package]]
 name = "pass-pgp"
-version = "1.5.0"
+version = "1.5.1"
 dependencies = [
  "anyhow",
  "async-trait",
