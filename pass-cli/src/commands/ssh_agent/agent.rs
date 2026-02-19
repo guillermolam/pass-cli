@@ -112,6 +112,7 @@ pub async fn start_agent(
     Ok(())
 }
 
+#[allow(unused_variables)]
 fn print_agent_startup_message(socket_display: &str, refresh_interval: u64) {
     eprintln!("SSH agent started successfully!");
     eprintln!("To use this agent, run:");
