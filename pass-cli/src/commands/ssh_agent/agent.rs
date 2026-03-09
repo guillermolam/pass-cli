@@ -241,8 +241,20 @@ impl Session for KeyStorage {
                     use rsa::signature::{RandomizedSigner, SignatureEncoding};
                     let algorithm;
 
-                    let private_key: rsa::RsaPrivateKey =
-                        key.try_into().map_err(AgentError::other)?;
+                    // Work around a bug in ssh-key 0.6.7 where TryFrom<&RsaKeypair> for
+                    // rsa::RsaPrivateKey uses `key.private.p` for both prime slots instead of
+                    // `key.private.p` and `key.private.q`. This causes p*p ≠ n, making
+                    // validation fail for all RSA keys — most visibly RSA 4096-bit keys.
+                    let private_key = rsa::RsaPrivateKey::from_components(
+                        rsa::BigUint::try_from(&key.public.n).map_err(AgentError::other)?,
+                        rsa::BigUint::try_from(&key.public.e).map_err(AgentError::other)?,
+                        rsa::BigUint::try_from(&key.private.d).map_err(AgentError::other)?,
+                        vec![
+                            rsa::BigUint::try_from(&key.private.p).map_err(AgentError::other)?,
+                            rsa::BigUint::try_from(&key.private.q).map_err(AgentError::other)?,
+                        ],
+                    )
+                    .map_err(AgentError::other)?;
                     let mut rng = rand::thread_rng();
                     let data = &sign_request.data;
 
@@ -465,5 +477,101 @@ impl Session for KeyStorage {
                 Err(AgentError::Failure)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ssh_key::{private::KeypairData, private::PrivateKey as SshPrivateKey};
+
+    // Unencrypted RSA 4096 test key (generated for testing only, not used in production)
+    const TEST_RSA_4096_KEY: &str = "-----BEGIN OPENSSH PRIVATE KEY-----
+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
+-----END OPENSSH PRIVATE KEY-----
+";
+
+    /// Regression test for RSA 4096 signing failure.
+    ///
+    /// ssh-key 0.6.7 has a bug in `TryFrom<&RsaKeypair> for rsa::RsaPrivateKey` where
+    /// `key.private.p` is used for both prime slots instead of `p` and `q`. This causes
+    /// `from_components` to fail (p*p ≠ n) for all RSA keys. Our signing code works around
+    /// this by constructing the key manually with the correct `p` and `q`.
+    #[test]
+    fn test_rsa_4096_key_construction_succeeds() {
+        let private_key =
+            SshPrivateKey::from_openssh(TEST_RSA_4096_KEY).expect("Should parse RSA 4096 key");
+
+        let KeypairData::Rsa(keypair) = private_key.key_data() else {
+            panic!("Expected RSA keypair");
+        };
+
+        // The buggy try_into() would fail here for RSA 4096 keys.
+        let buggy_result = rsa::RsaPrivateKey::try_from(keypair);
+        assert!(
+            buggy_result.is_err(),
+            "ssh-key 0.6.7 bug: try_into() should fail due to p used twice instead of p and q"
+        );
+
+        // Our fix: construct from_components with the correct p and q.
+        let fixed_result = rsa::RsaPrivateKey::from_components(
+            rsa::BigUint::try_from(&keypair.public.n).expect("n"),
+            rsa::BigUint::try_from(&keypair.public.e).expect("e"),
+            rsa::BigUint::try_from(&keypair.private.d).expect("d"),
+            vec![
+                rsa::BigUint::try_from(&keypair.private.p).expect("p"),
+                rsa::BigUint::try_from(&keypair.private.q).expect("q"),
+            ],
+        );
+        assert!(
+            fixed_result.is_ok(),
+            "Fixed construction should succeed: {:?}",
+            fixed_result.err()
+        );
     }
 }
