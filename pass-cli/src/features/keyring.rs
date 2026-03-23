@@ -1,7 +1,7 @@
 use crate::constants::SESSION_FILE_NAME;
 use anyhow::{Context, Result};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use keyring::{Entry, Error as KeyringError};
+use keyring_core::{Entry, Error as KeyringError};
 use pass_domain::utils::xor_key_multibyte;
 use pass_domain::{LocalKey, LocalKeyProvider};
 use sha2::{Digest, Sha256};
@@ -12,6 +12,84 @@ const KEYRING_SERVICE_NAME: &str = "ProtonPassCLI";
 const KEYRING_CREDENTIAL_NAME: &str = "cli-local-key";
 const XOR_KEY_LENGTH: usize = 32;
 
+#[cfg(target_os = "linux")]
+const LINUX_KEYRING_BACKEND_ENV_VAR: &str = "PROTON_PASS_LINUX_KEYRING";
+
+#[cfg(target_os = "linux")]
+enum LinuxKeyringBackend {
+    Dbus,
+    Kernel,
+}
+
+#[cfg(target_os = "linux")]
+impl LinuxKeyringBackend {
+    fn from_env() -> Self {
+        match std::env::var(LINUX_KEYRING_BACKEND_ENV_VAR) {
+            Ok(val) => match val.to_ascii_lowercase().as_str() {
+                "dbus" => Self::Dbus,
+                "kernel" => Self::Kernel,
+                other => {
+                    warn!(
+                        "Linux keyring: unknown value '{other}' for {LINUX_KEYRING_BACKEND_ENV_VAR}, \
+                    falling back to kernel keyutils. Valid values are: dbus, kernel"
+                    );
+                    Self::Kernel
+                }
+            },
+            Err(_) => Self::Kernel,
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn init_linux_store() -> Result<()> {
+    match LinuxKeyringBackend::from_env() {
+        LinuxKeyringBackend::Dbus => {
+            info!(
+                "Linux keyring: D-Bus backend requested via {LINUX_KEYRING_BACKEND_ENV_VAR}=dbus"
+            );
+            let store = zbus_secret_service_keyring_store::Store::new().map_err(|e| {
+                anyhow::anyhow!(
+                    "Linux keyring: D-Bus secret service is unavailable or locked. \
+                    Make sure your desktop session is unlocked and the Secret Service \
+                    (e.g. GNOME Keyring) is running: {e}"
+                )
+            })?;
+            keyring_core::set_default_store(store);
+            info!("Linux keyring: using zbus secret service (persistent)");
+        }
+        LinuxKeyringBackend::Kernel => {
+            let store = linux_keyutils_keyring_store::Store::new()
+                .map_err(|e| anyhow::anyhow!("Failed to initialize kernel keyutils store: {e}"))?;
+            keyring_core::set_default_store(store);
+            info!("Linux keyring: using kernel keyutils (cleared on reboot)");
+        }
+    }
+
+    Ok(())
+}
+
+fn init_keyring_store() -> Result<()> {
+    #[cfg(target_os = "macos")]
+    {
+        let store = apple_native_keyring_store::keychain::Store::new()
+            .map_err(|e| anyhow::anyhow!("Failed to initialize macOS keychain store: {e}"))?;
+        keyring_core::set_default_store(store);
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let store = windows_native_keyring_store::Store::new()
+            .map_err(|e| anyhow::anyhow!("Failed to initialize Windows keyring store: {e}"))?;
+        keyring_core::set_default_store(store);
+    }
+
+    #[cfg(target_os = "linux")]
+    init_linux_store()?;
+
+    Ok(())
+}
+
 pub struct KeyringKeyProvider {
     key: RwLock<Option<Vec<u8>>>,
     xor_key: Vec<u8>,
@@ -20,6 +98,7 @@ pub struct KeyringKeyProvider {
 
 impl KeyringKeyProvider {
     pub fn new(base_dir: PathBuf) -> Result<Self> {
+        init_keyring_store()?;
         let xor_key = pass_domain::crypto::random_bytes(XOR_KEY_LENGTH);
         Ok(Self {
             key: RwLock::new(None),
