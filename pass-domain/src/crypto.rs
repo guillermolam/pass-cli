@@ -1,6 +1,6 @@
 use aes_gcm::aead::{Aead, Payload};
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
-use rand::RngCore;
+use rand::Rng;
 
 #[derive(Clone, Debug)]
 pub enum EncryptionTag {
