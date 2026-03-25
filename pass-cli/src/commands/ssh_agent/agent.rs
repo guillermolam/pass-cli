@@ -244,7 +244,7 @@ impl Session for KeyStorage {
                     // Work around a bug in ssh-key 0.6.7 where TryFrom<&RsaKeypair> for
                     // rsa::RsaPrivateKey uses `key.private.p` for both prime slots instead of
                     // `key.private.p` and `key.private.q`. This causes p*p ≠ n, making
-                    // validation fail for all RSA keys — most visibly RSA 4096-bit keys.
+                    // validation fail for all RSA keys - most visibly RSA 4096-bit keys.
                     let private_key = rsa::RsaPrivateKey::from_components(
                         rsa::BigUint::try_from(&key.public.n).map_err(AgentError::other)?,
                         rsa::BigUint::try_from(&key.public.e).map_err(AgentError::other)?,
