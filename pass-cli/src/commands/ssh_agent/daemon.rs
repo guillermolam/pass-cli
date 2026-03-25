@@ -253,6 +253,17 @@ pub fn run_daemon_stop(pid_file: Option<PathBuf>) -> Result<()> {
     }
 
     stop_process(info.pid).context("Failed to stop daemon process")?;
+
+    // Wait briefly for the process to actually exit before cleaning up.
+    // Without this, a rapid stop/start sequence may overlap: the old process
+    // could still be alive (closing the socket) while the new one launches.
+    for _ in 0..20 {
+        if !is_process_running(info.pid) {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+
     let _ = std::fs::remove_file(&pid_file);
     println!("Daemon stopped (PID: {})", info.pid);
 
