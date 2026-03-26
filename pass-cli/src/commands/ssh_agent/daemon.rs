@@ -3,7 +3,12 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 
+const PID_FILE_ENV_VAR: &str = "PROTON_PASS_SSH_DAEMON_PIDFILE";
+
 pub fn get_default_pid_file() -> Result<PathBuf> {
+    if let Ok(path) = std::env::var(PID_FILE_ENV_VAR) {
+        return Ok(PathBuf::from(path));
+    }
     let home = dirs::home_dir().ok_or_else(|| anyhow!("Could not determine home directory"))?;
     Ok(home.join(".ssh").join("proton-pass-agent.pid"))
 }
