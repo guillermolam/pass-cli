@@ -53,6 +53,7 @@ impl PassClient {
         &self,
         personal_access_token_id: &PersonalAccessTokenId,
     ) -> Result<Vec<PersonalAccessTokenAccess>> {
+        self.personal_access_token_operation_guard()?;
         let access_list = self
             .fetch_personal_access_token_access(personal_access_token_id)
             .await

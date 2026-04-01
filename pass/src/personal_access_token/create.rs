@@ -76,6 +76,7 @@ impl PassClient {
         &self,
         args: CreatePersonalAccessTokenArgs,
     ) -> Result<CreatePersonalAccessTokenResponse> {
+        self.personal_access_token_operation_guard()?;
         info!("Creating personal access token: {}", args.name);
 
         let (req, raw_personal_access_token_key) = self

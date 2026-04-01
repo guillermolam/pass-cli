@@ -1,3 +1,6 @@
+use crate::PassClient;
+use anyhow::{Result, anyhow};
+
 mod create;
 mod delete;
 mod grant;
@@ -6,7 +9,156 @@ mod list_access;
 mod renew;
 mod revoke;
 
+const PERSONAL_ACCESS_TOKEN_OPERATION_ERROR: &str =
+    "Cannot manage or act on personal access tokens while logged in with a personal access token";
+
+impl PassClient {
+    pub(crate) fn personal_access_token_operation_guard(&self) -> Result<()> {
+        if self.is_pat_account() {
+            return Err(anyhow!(PERSONAL_ACCESS_TOKEN_OPERATION_ERROR));
+        }
+
+        Ok(())
+    }
+}
+
 pub use create::{CreatePersonalAccessTokenArgs, CreatePersonalAccessTokenResponse};
 pub use list::PersonalAccessToken;
 pub use list_access::PersonalAccessTokenAccess;
 pub use renew::RenewPersonalAccessTokenResponse;
+
+#[cfg(test)]
+mod tests {
+    use super::PERSONAL_ACCESS_TOKEN_OPERATION_ERROR;
+    use crate::test_tools::*;
+    use pass_domain::{PersonalAccessTokenId, ShareId, ShareRole};
+
+    #[muon::test(scheme(HTTP))]
+    async fn test_create_personal_access_token_blocked_for_pat_session(server: Arc<Server>) {
+        let client = server.pass_pat_client_no_setup().await;
+        let handled = server.handler("/account/v4/personal-access-token", |_| success_code());
+
+        let error = client
+            .create_personal_access_token(
+                super::CreatePersonalAccessTokenArgs::new("test".to_string(), 1735689600).unwrap(),
+            )
+            .await
+            .err()
+            .expect("PAT sessions should not be able to create personal access tokens");
+
+        assert_eq!(PERSONAL_ACCESS_TOKEN_OPERATION_ERROR, error.to_string());
+        assert_not_hit!(handled);
+    }
+
+    #[muon::test(scheme(HTTP))]
+    async fn test_list_personal_access_tokens_blocked_for_pat_session(server: Arc<Server>) {
+        let client = server.pass_pat_client_no_setup().await;
+        let handled = server.handler("/account/v4/personal-access-token", |_| success_code());
+
+        let error = client
+            .list_personal_access_tokens()
+            .await
+            .expect_err("PAT sessions should not be able to list personal access tokens");
+
+        assert_eq!(PERSONAL_ACCESS_TOKEN_OPERATION_ERROR, error.to_string());
+        assert_not_hit!(handled);
+    }
+
+    #[muon::test(scheme(HTTP))]
+    async fn test_delete_personal_access_token_blocked_for_pat_session(server: Arc<Server>) {
+        let client = server.pass_pat_client_no_setup().await;
+        let handled = server.handler_with_method(
+            Method::DELETE,
+            "/account/v4/personal-access-token/test_pat",
+            |_| success_code(),
+        );
+
+        let error = client
+            .delete_personal_access_token(&PersonalAccessTokenId::new("test_pat".to_string()))
+            .await
+            .expect_err("PAT sessions should not be able to delete personal access tokens");
+
+        assert_eq!(PERSONAL_ACCESS_TOKEN_OPERATION_ERROR, error.to_string());
+        assert_not_hit!(handled);
+    }
+
+    #[muon::test(scheme(HTTP))]
+    async fn test_renew_personal_access_token_blocked_for_pat_session(server: Arc<Server>) {
+        let client = server.pass_pat_client_no_setup().await;
+        let handled = server.handler_with_method(
+            Method::POST,
+            "/account/v4/personal-access-token/test_pat/renew",
+            |_| success_code(),
+        );
+
+        let error = client
+            .renew_personal_access_token(
+                &PersonalAccessTokenId::new("test_pat".to_string()),
+                1735689600,
+            )
+            .await
+            .err()
+            .expect("PAT sessions should not be able to renew personal access tokens");
+
+        assert_eq!(PERSONAL_ACCESS_TOKEN_OPERATION_ERROR, error.to_string());
+        assert_not_hit!(handled);
+    }
+
+    #[muon::test(scheme(HTTP))]
+    async fn test_list_personal_access_token_access_blocked_for_pat_session(server: Arc<Server>) {
+        let client = server.pass_pat_client_no_setup().await;
+        let handled = server.handler("/pass/v1/personal-access-token/test_pat/access", |_| {
+            success_code()
+        });
+
+        let error = client
+            .list_personal_access_token_access(&PersonalAccessTokenId::new("test_pat".to_string()))
+            .await
+            .expect_err("PAT sessions should not be able to list personal access token access");
+
+        assert_eq!(PERSONAL_ACCESS_TOKEN_OPERATION_ERROR, error.to_string());
+        assert_not_hit!(handled);
+    }
+
+    #[muon::test(scheme(HTTP))]
+    async fn test_grant_personal_access_token_access_blocked_for_pat_session(server: Arc<Server>) {
+        let client = server.pass_pat_client_no_setup().await;
+        let handled = server.handler("/pass/v1/personal-access-token/test_pat/access", |_| {
+            success_code()
+        });
+
+        let error = client
+            .grant_personal_access_token_access(
+                &PersonalAccessTokenId::new("test_pat".to_string()),
+                &ShareId::new("test_share".to_string()),
+                None,
+                &ShareRole::Viewer,
+            )
+            .await
+            .expect_err("PAT sessions should not be able to grant personal access token access");
+
+        assert_eq!(PERSONAL_ACCESS_TOKEN_OPERATION_ERROR, error.to_string());
+        assert_not_hit!(handled);
+    }
+
+    #[muon::test(scheme(HTTP))]
+    async fn test_revoke_personal_access_token_access_blocked_for_pat_session(server: Arc<Server>) {
+        let client = server.pass_pat_client_no_setup().await;
+        let handled = server.handler_with_method(
+            Method::DELETE,
+            "/pass/v1/personal-access-token/test_pat/access/test_share",
+            |_| success_code(),
+        );
+
+        let error = client
+            .revoke_personal_access_token_access(
+                &PersonalAccessTokenId::new("test_pat".to_string()),
+                &ShareId::new("test_share".to_string()),
+            )
+            .await
+            .expect_err("PAT sessions should not be able to revoke personal access token access");
+
+        assert_eq!(PERSONAL_ACCESS_TOKEN_OPERATION_ERROR, error.to_string());
+        assert_not_hit!(handled);
+    }
+}

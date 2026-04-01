@@ -9,6 +9,7 @@ impl PassClient {
         &self,
         personal_access_token_id: &PersonalAccessTokenId,
     ) -> anyhow::Result<()> {
+        self.personal_access_token_operation_guard()?;
         info!("Deleting personal access token: {personal_access_token_id}");
 
         let res = self

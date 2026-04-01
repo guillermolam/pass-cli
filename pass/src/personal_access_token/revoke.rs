@@ -10,6 +10,7 @@ impl PassClient {
         personal_access_token_id: &PersonalAccessTokenId,
         share_id: &ShareId,
     ) -> Result<()> {
+        self.personal_access_token_operation_guard()?;
         info!(
             "Revoking personal access token {personal_access_token_id} access from share {share_id}"
         );

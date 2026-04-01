@@ -35,6 +35,7 @@ impl PassClient {
         item_id: Option<&ItemId>,
         role: &ShareRole,
     ) -> Result<()> {
+        self.personal_access_token_operation_guard()?;
         info!(
             "Granting personal access token {} access to share {} (item: {:?})",
             personal_access_token_id, share_id, item_id
@@ -183,6 +184,7 @@ impl PassClient {
         &self,
         personal_access_token_id: &PersonalAccessTokenId,
     ) -> Result<Vec<u8>> {
+        self.personal_access_token_operation_guard()?;
         let personal_access_tokens = self
             .list_personal_access_tokens()
             .await

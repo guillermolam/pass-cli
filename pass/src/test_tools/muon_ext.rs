@@ -21,6 +21,7 @@ pub trait MuonServerExt {
     async fn pass_client(&self) -> PassClient;
     async fn pass_client_with_plan(&self, plan: PlanType) -> PassClient;
     async fn pass_client_no_setup(&self) -> PassClient;
+    async fn pass_pat_client_no_setup(&self) -> PassClient;
 }
 
 impl MuonServerExt for Arc<Server> {
@@ -99,6 +100,21 @@ impl MuonServerExt for Arc<Server> {
             client,
             Arc::new(TestClientFeatures::new(key)),
             pass_domain::AccountType::User,
+        )
+    }
+
+    async fn pass_pat_client_no_setup(&self) -> PassClient {
+        let key = pass_domain::crypto::generate_encryption_key();
+        let client = self.client().await;
+        let session = client
+            .new_session_without_credentials(())
+            .await
+            .expect("Error creating session");
+        init_session(self, session).await;
+        PassClient::new(
+            client,
+            Arc::new(TestClientFeatures::new(key)),
+            pass_domain::AccountType::PersonalAccessToken,
         )
     }
 }

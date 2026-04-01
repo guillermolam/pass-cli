@@ -33,6 +33,7 @@ impl PassClient {
         personal_access_token_id: &PersonalAccessTokenId,
         expiration_time: i64,
     ) -> Result<RenewPersonalAccessTokenResponse> {
+        self.personal_access_token_operation_guard()?;
         info!("Renewing personal access token: {personal_access_token_id}");
 
         let raw_pat_key = self
