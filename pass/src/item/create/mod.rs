@@ -1,6 +1,7 @@
 use pass_domain::{ItemType, TelemetryEvent};
 use std::collections::HashMap;
 
+pub mod batch;
 pub(crate) mod common;
 pub mod credit_card;
 pub mod custom;
