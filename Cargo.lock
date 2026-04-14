@@ -3394,6 +3394,7 @@ dependencies = [
  "tokio",
  "tracing",
  "urlencoding",
+ "zeroize",
 ]
 
 [[package]]
@@ -3449,6 +3450,7 @@ dependencies = [
  "uuid",
  "windows-native-keyring-store",
  "zbus-secret-service-keyring-store",
+ "zeroize",
  "zeroizing-alloc",
  "zip",
 ]

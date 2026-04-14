@@ -28,6 +28,7 @@ use anyhow::{Context, Result, bail};
 use pass::{FirstTimeSetupKey, PassClient};
 use pass_domain::{AccountType, LocalKeyProvider};
 use std::sync::{Arc, RwLock};
+use zeroize::Zeroizing;
 
 pub struct Authenticator {
     key_provider: Arc<dyn LocalKeyProvider>,
@@ -154,7 +155,7 @@ impl Authenticator {
         client_features: Arc<dyn pass_domain::ClientFeatures>,
         store: Arc<RwLock<PassSessionStore>>,
         username: Option<String>,
-    ) -> Result<(PassClient<ProdContext>, String)> {
+    ) -> Result<(PassClient<ProdContext>, Zeroizing<String>)> {
         // Check if already authenticated
         let session = client.get_session(()).await;
         if let Some(session) = session
@@ -209,7 +210,7 @@ impl Authenticator {
         client_features: Arc<dyn pass_domain::ClientFeatures>,
         store: Arc<RwLock<PassSessionStore>>,
         token: Option<String>,
-    ) -> Result<(PassClient<ProdContext>, Vec<u8>)> {
+    ) -> Result<(PassClient<ProdContext>, Zeroizing<Vec<u8>>)> {
         // Check if already authenticated
         let session = client.get_session(()).await;
         if let Some(session) = session

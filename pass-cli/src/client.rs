@@ -28,6 +28,7 @@ use pass_auth::store::{CustomEnv, PassSessionStore, SerializedEnv};
 use std::io::Read;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
+use zeroize::Zeroizing;
 
 const APP_NAME: &str = "cli-pass";
 
@@ -69,7 +70,7 @@ pub fn get_value(
         Err(_) => match std::env::var(file_env_var) {
             Ok(v) => {
                 let mut f = std::fs::File::open(v).context("Error opening file")?;
-                let mut buff = String::new();
+                let mut buff = Zeroizing::new(String::new());
                 f.read_to_string(&mut buff).context("Error reading file")?;
                 Ok(buff.trim().to_string())
             }

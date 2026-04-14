@@ -32,6 +32,7 @@ use pass_domain::aes_gcm::aead::generic_array::GenericArray;
 use pass_domain::aes_gcm::aead::{Aead, Payload};
 use pass_domain::aes_gcm::{AesGcm, KeyInit};
 use std::sync::{Arc, RwLock};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 const POLL_INTERVAL_SECONDS: u64 = 10;
 const MAX_POLL_ATTEMPTS: u32 = 60; // 60 times every 10 seconds -> 10 minutes total
@@ -63,7 +64,7 @@ struct SessionResponse {
     pub refresh_token: String,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, Zeroize, ZeroizeOnDrop)]
 pub struct SessionPayload {
     #[serde(rename = "keyPassword")]
     pub key_password: String,

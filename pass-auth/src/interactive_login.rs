@@ -25,10 +25,11 @@ use anyhow::{Context, bail};
 use muon::auth::LoginFlow;
 use muon::{GET, Session};
 use std::sync::{Arc, RwLock};
+use zeroize::Zeroizing;
 
 pub struct AuthenticationResult {
     pub client: ProdClient,
-    pub password: String,
+    pub password: Zeroizing<String>,
 }
 
 pub async fn perform_interactive_login(
@@ -96,7 +97,10 @@ pub async fn perform_interactive_login(
         .await
         .context("Error initializing session")?;
 
-    Ok(AuthenticationResult { client, password })
+    Ok(AuthenticationResult {
+        client,
+        password: Zeroizing::new(password),
+    })
 }
 
 async fn init_session(session: &Session<ProdContext>) -> anyhow::Result<()> {

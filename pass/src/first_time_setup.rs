@@ -19,15 +19,15 @@
 
 use crate::{PassClient, PassClientContext};
 use anyhow::{Context, Result};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 const PERSONAL_ACCESS_TOKEN_KEY_FILE_NAME: &str = "pat_key";
 
 #[derive(Zeroize, ZeroizeOnDrop)]
 pub enum FirstTimeSetupKey {
     Passphrase(Vec<u8>),
-    UserPassword(String),
-    PersonalAccessToken(Vec<u8>),
+    UserPassword(Zeroizing<String>),
+    PersonalAccessToken(Zeroizing<Vec<u8>>),
 }
 
 impl<C: PassClientContext> PassClient<C> {

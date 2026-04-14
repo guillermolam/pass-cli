@@ -23,6 +23,7 @@ use base64::Engine;
 use muon::POST;
 use muon::SessionCredentials;
 use muon::auth::{Auth, Tokens};
+use zeroize::Zeroizing;
 
 const TOKEN_PREFIX: &str = "pst_";
 const TOKEN_LENGTH_WITHOUT_PREFIX: usize = 64;
@@ -60,12 +61,12 @@ struct PersonalAccessTokenLoginRequest {
 
 pub struct ParsedPersonalAccessTokenToken {
     pub token: String,
-    pub personal_access_token_key: Vec<u8>,
+    pub personal_access_token_key: Zeroizing<Vec<u8>>,
 }
 
 pub struct PersonalAccessTokenLoginResult {
     pub credentials: SessionCredentials,
-    pub personal_access_token_key: Vec<u8>,
+    pub personal_access_token_key: Zeroizing<Vec<u8>>,
 }
 
 pub fn parse_personal_access_token_token(
@@ -104,7 +105,7 @@ pub fn parse_personal_access_token_token(
 
     Ok(ParsedPersonalAccessTokenToken {
         token: token.to_string(),
-        personal_access_token_key,
+        personal_access_token_key: Zeroizing::new(personal_access_token_key),
     })
 }
 
