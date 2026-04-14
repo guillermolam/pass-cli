@@ -62,8 +62,20 @@ pub fn get_base_dir() -> anyhow::Result<PathBuf> {
     // Create a .session subfolder (just like before, but in the platform-specific location)
     let session_dir = proton_dir.join(".session");
 
-    // Create the directory if it doesn't exist
-    std::fs::create_dir_all(&session_dir).context("Error creating session directory")?;
+    // Create the directory if it doesn't exist, with owner-only permissions on Unix
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        std::fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(&session_dir)
+            .context("Error creating session directory")?;
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::create_dir_all(&session_dir).context("Error creating session directory")?;
+    }
 
     // Return the canonicalized (absolute) path
     let session_dir_absolute =
