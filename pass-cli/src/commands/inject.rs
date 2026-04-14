@@ -33,29 +33,54 @@ fn compile_pass_uri_regex() -> Result<Regex> {
         .map_err(|e| anyhow!("Failed to compile pass URI regex: {}", e))
 }
 
-fn write_file_with_permissions(file_path: &str, content: &str, mode: u32) -> Result<()> {
+fn write_temp(temp_path: &std::path::Path, content: &str, mode: u32) -> Result<()> {
     #[cfg(not(target_os = "windows"))]
     {
         use std::os::unix::fs::OpenOptionsExt;
-        let mut options = fs::OpenOptions::new();
-        options.write(true).create(true).truncate(true).mode(mode);
-
-        let mut file = options.open(file_path).with_context(|| {
-            format!("Failed to create output file with permissions: {file_path}")
-        })?;
-
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(mode)
+            .open(temp_path)
+            .with_context(|| format!("Failed to create temp file: {}", temp_path.display()))?;
         file.write_all(content.as_bytes())
-            .with_context(|| format!("Failed to write to output file: {file_path}"))?;
+            .with_context(|| format!("Failed to write to temp file: {}", temp_path.display()))?;
+        file.sync_all()
+            .with_context(|| format!("Failed to sync temp file: {}", temp_path.display()))?;
     }
 
     #[cfg(target_os = "windows")]
     {
-        fs::write(file_path, content)
-            .with_context(|| format!("Failed to write to output file: {file_path}"))?;
         let _ = mode;
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(temp_path)
+            .with_context(|| format!("Failed to create temp file: {}", temp_path.display()))?;
+        file.write_all(content.as_bytes())
+            .with_context(|| format!("Failed to write to temp file: {}", temp_path.display()))?;
+        file.sync_all()
+            .with_context(|| format!("Failed to sync temp file: {}", temp_path.display()))?;
     }
 
     Ok(())
+}
+
+fn write_file_with_permissions(file_path: &str, content: &str, mode: u32) -> Result<()> {
+    let target = std::path::Path::new(file_path);
+    let parent = target.parent().unwrap_or(std::path::Path::new("."));
+    let temp_path = parent.join(format!(".{}.tmp", uuid::Uuid::new_v4()));
+
+    if let Err(e) = write_temp(&temp_path, content, mode) {
+        let _ = fs::remove_file(&temp_path);
+        return Err(e);
+    }
+
+    fs::rename(&temp_path, file_path)
+        .with_context(|| format!("Failed to rename temp file to {file_path}"))
+        .inspect_err(|_e| {
+            let _ = fs::remove_file(&temp_path);
+        })
 }
 
 pub async fn run(
@@ -205,6 +230,56 @@ mod tests {
     use crate::commands::secret_resolver::SecretReference;
     use crate::commands::secret_resolver::tests::StaticSecretResolver;
     use serde_json::json;
+
+    #[test]
+    fn write_file_atomic_creates_file_with_correct_content() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("output.env");
+        let content = "SECRET=hunter2\n";
+
+        write_file_with_permissions(path.to_str().unwrap(), content, 0o600).unwrap();
+
+        assert_eq!(fs::read_to_string(&path).unwrap(), content);
+    }
+
+    #[test]
+    fn write_file_atomic_replaces_existing_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("output.env");
+        fs::write(&path, "OLD=content\n").unwrap();
+
+        write_file_with_permissions(path.to_str().unwrap(), "NEW=content\n", 0o600).unwrap();
+
+        assert_eq!(fs::read_to_string(&path).unwrap(), "NEW=content\n");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_file_atomic_sets_unix_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("secret.env");
+
+        write_file_with_permissions(path.to_str().unwrap(), "KEY=value\n", 0o600).unwrap();
+
+        let perms = fs::metadata(&path).unwrap().permissions();
+        assert_eq!(perms.mode() & 0o777, 0o600);
+    }
+
+    #[test]
+    fn write_file_atomic_leaves_no_temp_file_on_success() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("output.env");
+
+        write_file_with_permissions(path.to_str().unwrap(), "KEY=value\n", 0o600).unwrap();
+
+        let leftover: Vec<_> = fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_string_lossy().ends_with(".tmp"))
+            .collect();
+        assert!(leftover.is_empty(), "temp files were not cleaned up");
+    }
 
     #[test]
     fn parse_file_mode_octal() {
