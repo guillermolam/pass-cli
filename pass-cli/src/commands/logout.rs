@@ -69,9 +69,8 @@ pub async fn run(client: PassClient) -> Result<()> {
 pub async fn force_logout() -> Result<()> {
     println!("Executing force logout");
 
-    // Best-effort: remove the keyring credential before wiping local files.
     if let Ok(base_dir) = get_base_dir() {
-        crate::features::try_cleanup_keyring(base_dir).await;
+        crate::features::try_cleanup_all_key_providers(base_dir).await;
     }
 
     cleanup().await?;
