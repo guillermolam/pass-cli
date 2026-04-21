@@ -46,7 +46,7 @@ impl Authenticator {
         };
 
         store_snapshot
-            .serialize()
+            .persist_now()
             .await
             .context("Error persisting session store")?;
 
@@ -95,6 +95,11 @@ impl Authenticator {
             bail!("Already authenticated");
         }
 
+        {
+            let mut store_guard = store.write().expect("store rwlock poisoned");
+            store_guard.set_account_type(AccountType::User);
+        }
+
         // Create unauthenticated session
         let session = client
             .new_session_without_credentials(())
@@ -113,10 +118,6 @@ impl Authenticator {
             .await
             .context("Error storing web login session")?;
 
-        {
-            let mut store_guard = store.write().expect("store rwlock poisoned");
-            store_guard.set_account_type(AccountType::User);
-        }
         Self::persist_store(&store).await?;
 
         let pass_client = PassClient::new(client, client_features, AccountType::User);
@@ -175,6 +176,12 @@ impl Authenticator {
 
         info!("Logging in user: {}", username);
 
+        // Set account type in store for regular user login
+        {
+            let mut store_guard = store.write().expect("store rwlock poisoned");
+            store_guard.set_account_type(AccountType::User);
+        }
+
         // Perform interactive login
         let auth_result = interactive_login::perform_interactive_login(
             client,
@@ -186,11 +193,6 @@ impl Authenticator {
         .await
         .context("Error in interactive login flow")?;
 
-        // Set account type in store for regular user login
-        {
-            let mut store_guard = store.write().expect("store rwlock poisoned");
-            store_guard.set_account_type(AccountType::User);
-        }
         Self::persist_store(&store).await?;
 
         info!("Logged in user: {}", username);
@@ -228,6 +230,11 @@ impl Authenticator {
             None => self.credential_provider.get_personal_access_token().await?,
         };
 
+        {
+            let mut store_guard = store.write().expect("store rwlock poisoned");
+            store_guard.set_account_type(AccountType::PersonalAccessToken);
+        }
+
         // Create unauthenticated session
         let session = client
             .new_session_without_credentials(())
@@ -250,10 +257,6 @@ impl Authenticator {
             .await
             .context("Error storing personal access token session")?;
 
-        {
-            let mut store_guard = store.write().expect("store rwlock poisoned");
-            store_guard.set_account_type(AccountType::PersonalAccessToken);
-        }
         Self::persist_store(&store).await?;
 
         let pass_client =

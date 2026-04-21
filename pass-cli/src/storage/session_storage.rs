@@ -20,6 +20,9 @@
 use anyhow::{Context, Result, anyhow};
 use pass_auth::SessionStorage;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static WRITE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 pub struct FileSystemSessionStorage {
     file_path: PathBuf,
@@ -59,25 +62,41 @@ impl SessionStorage for FileSystemSessionStorage {
     async fn save(&self, data: &[u8]) -> Result<()> {
         self.ensure_session_file_not_symlink().await?;
 
+        let counter = WRITE_COUNTER.fetch_add(1, Ordering::Relaxed);
+        let tmp_name = format!("session.tmp.{}.{}", std::process::id(), counter);
+        let tmp_path = self
+            .file_path
+            .parent()
+            .context("Session file has no parent directory")?
+            .join(tmp_name);
+
         #[cfg(not(target_os = "windows"))]
         {
             use tokio::io::AsyncWriteExt;
             let mut options = tokio::fs::OpenOptions::new();
             options.write(true).create(true).truncate(true).mode(0o600);
             let mut file = options
-                .open(&self.file_path)
+                .open(&tmp_path)
                 .await
-                .context("Error opening file with secure permissions")?;
+                .context("Error opening temp session file")?;
             file.write_all(data)
                 .await
-                .context("Error writing session file")?;
+                .context("Error writing temp session file")?;
+            file.flush()
+                .await
+                .context("Error flushing temp session file")?;
         }
 
         #[cfg(target_os = "windows")]
         {
-            tokio::fs::write(&self.file_path, data)
+            tokio::fs::write(&tmp_path, data)
                 .await
-                .context("Error writing session file")?;
+                .context("Error writing temp session file")?;
+        }
+
+        if let Err(e) = tokio::fs::rename(&tmp_path, &self.file_path).await {
+            let _ = tokio::fs::remove_file(&tmp_path).await;
+            return Err(e).context("Error atomically replacing session file");
         }
 
         Ok(())

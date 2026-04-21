@@ -29,6 +29,7 @@ use pass_domain::crypto::EncryptionTag;
 use pass_domain::{AccountType, LocalKeyProvider};
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 
 pub type PassSessionKeyType = ();
@@ -172,6 +173,8 @@ pub struct PassSessionStore {
     pub storage: Arc<dyn SessionStorage>,
     pub key_provider: Arc<dyn LocalKeyProvider>,
     pub account_type: AccountType,
+    persist_generation: Arc<AtomicU64>,
+    persist_lock: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl std::fmt::Debug for PassSessionStore {
@@ -184,21 +187,42 @@ impl std::fmt::Debug for PassSessionStore {
 }
 
 impl PassSessionStore {
+    fn schedule_persist(&self) {
+        let generation = self.persist_generation.fetch_add(1, Ordering::SeqCst) + 1;
+        let store_clone = self.clone();
+        tokio::spawn(async move {
+            if let Err(e) = store_clone.persist_if_latest(generation).await {
+                error!("Error serializing auth: {e:?}");
+            } else {
+                debug!("Session updated");
+            }
+        });
+    }
+
+    async fn persist_if_latest(&self, generation: u64) -> anyhow::Result<()> {
+        let _guard = self.persist_lock.lock().await;
+
+        if self.persist_generation.load(Ordering::SeqCst) != generation {
+            debug!("Skipping stale session persistence request");
+            return Ok(());
+        }
+
+        self.serialize().await
+    }
+
+    pub async fn persist_now(&self) -> anyhow::Result<()> {
+        self.persist_generation.fetch_add(1, Ordering::SeqCst);
+        let _guard = self.persist_lock.lock().await;
+        self.serialize().await
+    }
+
     fn inner_set_auth(&mut self, auth: Option<Auth>) {
         {
             let mut lock = self.auth.lock().expect("auth mutex poisoned");
             *lock = auth;
         }
 
-        // Spawn async persistence task (fire-and-forget)
-        let store_clone = self.clone();
-        tokio::spawn(async move {
-            if let Err(e) = store_clone.serialize().await {
-                error!("Error serializing auth: {e:?}");
-            } else {
-                debug!("Session updated");
-            }
-        });
+        self.schedule_persist();
     }
 }
 
@@ -277,6 +301,8 @@ impl PassSessionStore {
             storage,
             key_provider,
             account_type: AccountType::User, // Default to User for new stores
+            persist_generation: Arc::new(AtomicU64::new(0)),
+            persist_lock: Arc::new(tokio::sync::Mutex::new(())),
         }
     }
 
@@ -341,6 +367,8 @@ impl PassSessionStore {
             storage,
             key_provider,
             account_type: deserialized.account_type,
+            persist_generation: Arc::new(AtomicU64::new(0)),
+            persist_lock: Arc::new(tokio::sync::Mutex::new(())),
         }))
     }
 

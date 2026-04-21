@@ -54,9 +54,32 @@ impl FsStorage for RealFsStorage {
     }
 
     async fn store_file(&self, contents: Vec<u8>, path: &Path) -> anyhow::Result<()> {
-        tokio::fs::write(self.base_dir.join(path), &contents)
-            .await
-            .context("Error writing file")?;
+        let full_path = self.base_dir.join(path);
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            use tokio::io::AsyncWriteExt;
+            let mut file = tokio::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .mode(0o600)
+                .open(&full_path)
+                .await
+                .context("Error opening file for writing")?;
+            file.write_all(&contents)
+                .await
+                .context("Error writing file")?;
+            file.flush().await.context("Error flushing file")?;
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            tokio::fs::write(&full_path, &contents)
+                .await
+                .context("Error writing file")?;
+        }
+
         Ok(())
     }
 
