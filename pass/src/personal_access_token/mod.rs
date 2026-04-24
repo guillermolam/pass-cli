@@ -40,8 +40,7 @@ impl PersonalAccessTokenFlags {
     }
 }
 
-const PERSONAL_ACCESS_TOKEN_OPERATION_ERROR: &str =
-    "Cannot manage or act on personal access tokens while logged in with a personal access token";
+const PERSONAL_ACCESS_TOKEN_OPERATION_ERROR: &str = "Cannot manage or act on personal access tokens while logged in with a personal access token or agent session";
 
 impl<C: PassClientContext> PassClient<C> {
     pub(crate) fn personal_access_token_operation_guard(&self) -> Result<()> {

@@ -258,7 +258,7 @@ impl Authenticator {
             .context("Error storing personal access token session")?;
 
         // Create an authenticated client so we can fetch PAT flags from the self endpoint
-        let pass_client =
+        let mut pass_client =
             PassClient::new(client, client_features, AccountType::PersonalAccessToken);
 
         // Determine if this PAT was issued for an agent by checking the flags from the self endpoint
@@ -279,7 +279,9 @@ impl Authenticator {
             store_guard.set_account_type(account_type);
         }
 
-        let pass_client = pass_client.with_account_type(account_type);
+        if account_type == AccountType::AgentSession {
+            pass_client.set_account_type(AccountType::AgentSession);
+        }
 
         Self::persist_store(&store).await?;
 
