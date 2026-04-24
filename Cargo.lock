@@ -129,9 +129,9 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "apple-native-keyring-store"
-version = "0.2.3"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9cdab02b2a5e47c080382cb729e8fc53bedf4a498200fc72a4e6c691033a3f7b"
+checksum = "a7be2f067ccd8d4b4d4a66ddafe0f32a5dff31732f32dbff85fefc40929b1f72"
 dependencies = [
  "keyring-core",
  "log",
@@ -2529,9 +2529,9 @@ dependencies = [
 
 [[package]]
 name = "keyring-core"
-version = "0.7.4"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d8286c3ab222af2fa9e57874fe419893d967f739c7bf1743f98a88678edbf08"
+checksum = "fb1e621458ca9c51aa110bd0339d4751a056b9576bf1253aee1aa560dda0fc9d"
 dependencies = [
  "log",
 ]
@@ -2684,9 +2684,9 @@ dependencies = [
 
 [[package]]
 name = "linux-keyutils-keyring-store"
-version = "0.2.1"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07ce18cd294ff2e5de4ad61a8659a123e068859feafce12525511931f4f3d1a4"
+checksum = "39fbed79f71dc21eb21d3d07c0e908a3c58ff9a1fdbf5cf44230fb3deb6d994b"
 dependencies = [
  "keyring-core",
  "linux-keyutils",
@@ -6174,9 +6174,9 @@ checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
 
 [[package]]
 name = "windows-native-keyring-store"
-version = "0.5.1"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0e26ac29479a4b7f49d46afc9893122fc345430c6307d1fb7ac0d8d066c3f54"
+checksum = "b5fd986f648459dd29aa252ed3a5ad11a60c0b1251bf81625fb03a86c69d274e"
 dependencies = [
  "byteorder",
  "keyring-core",
@@ -6588,9 +6588,9 @@ dependencies = [
 
 [[package]]
 name = "zbus-secret-service-keyring-store"
-version = "0.3.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9eaa71bfd72ff7ee11e747174d666ff0b9fcaa4b1df94ca119e7e64703d77f1"
+checksum = "4ccede190ba363386a24e8021c7f3848393976609ec9f5d1f8c6c09ef37075b4"
 dependencies = [
  "keyring-core",
  "secret-service",
