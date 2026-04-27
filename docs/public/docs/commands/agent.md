@@ -5,9 +5,30 @@ Each agent is a personal access token with a dedicated flag that enables access 
 
 ## How it works
 
-Under the hood an agent is a [personal access token](./personal-access-token.md) with a special consideration. The difference is that item reads performed through `agent item view` are recorded in an audit log that you can inspect later with `agent monitor`. This makes agents more suitable than plain PATs when you want visibility into what an automated process is actually doing with your secrets.
+Under the hood an agent is a [personal access token](./personal-access-token.md) with a special consideration.
+When an agent performs certain operations, such as viewing or interacting with an item, it must supply a reason via `PROTON_PASS_AGENT_REASON`. Then, that reason is encrypted and stored in an audit log that you can inspect later with `agent monitor`. This makes agents more suitable than plain PATs when you want visibility into what an automated process is actually doing with your secrets.
 
-Authentication works the same way as a plain PAT: set `PROTON_PASS_PERSONAL_ACCESS_TOKEN` and calling `pass-cli login`. For more details you can look at the [Login command](./login.md).
+The following commands require a reason specified when being run by an agent:
+* `item view`
+* `item create` (any of its variants)
+* `item update`
+* `item trash`
+* `item untrash`
+* `item move`
+* `vault update`
+
+Authentication works the same way as a plain PAT: set `PROTON_PASS_PERSONAL_ACCESS_TOKEN` and call `pass-cli login`. For more details you can look at the [Login command](./login.md).
+
+## Providing a reason
+
+Before running any of the audited commands, the agent must set the `PROTON_PASS_AGENT_REASON` environment variable. It must be non-empty and at most 300 characters. It is stored end-to-end-encrypted alongside the log entry so the agent owner can review what the agent read and why.
+
+```bash
+PROTON_PASS_AGENT_REASON="Running nightly backup" pass-cli item view \
+    --vault-name "Production" \
+    --item-name "DB password" \
+    --field password
+```
 
 ## Typical workflow
 
@@ -36,12 +57,17 @@ AI agent:
 ```bash
 # The user will send the output to the agent and it should log in like this:
 
-# 1. Save the token value and use it in the agent's environment
-export PROTON_PASS_PERSONAL_ACCESS_TOKEN=pst_xxxx...xxxx::TOKENKEY
-pass-cli login
+# 1. Optionally use a separate session directory to avoid overwriting an existing session
+export PROTON_PASS_SESSION_DIR="/tmp/pass-agent-my-agent"
 
-# 2. The agent reads a secret, providing a reason for the access
-pass-cli agent item view --vault-name "Production" --item-name "DB password" --field password --reason "Running nightly backup"
+# 2. Check whether an existing session is already valid before logging in or log in
+pass-cli info 2>/dev/null || PROTON_PASS_PERSONAL_ACCESS_TOKEN=pst_xxxx...xxxx::TOKENKEY pass-cli login
+
+# 3. Read a secret, passing the reason inline
+PROTON_PASS_AGENT_REASON="Running nightly backup" pass-cli agent item view \
+    --vault-name "Production" \
+    --item-name "DB password" \
+    --field password
 ```
 
 ---
@@ -168,46 +194,6 @@ Revokes an agent's access to a vault.
 ```bash
 pass-cli agent access revoke my-agent --share-id <SHARE_ID>
 ```
-
----
-
-## `agent item view`
-
-```bash
-pass-cli agent item view \
-    (--vault-name <VAULT_NAME> | --share-id <SHARE_ID> | --uri <URI>) \
-    [--item-name <ITEM_NAME> | --item-id <ITEM_ID>] \
-    [--field <FIELD_NAME>] \
-    --reason <REASON>
-```
-
-Reads an item and records the access in the audit log. `--reason` is mandatory and cannot be empty, the reason is stored end-to-end-encrypted alongside the log entry.
-
-| Flag | Required | Description |
-|---|---|-------------------------------------------------------------------------------------------------------|
-| `--vault-name` | One of these | Vault name                                                                                            |
-| `--share-id` | One of these | Vault share ID                                                                                        |
-| `--uri` | One of these | Item reference in `pass://` format                                                                    |
-| `--item-name` | No | Item title                                                                                            |
-| `--item-id` | No | Item ID                                                                                               |
-| `--field` | No | Specific field to return (e.g. `password`, `username`). If omitted, the full item is returned as JSON |
-| `--reason` | Yes | Agent-supplied reason for accessing the item, stored in the audit log                                 |
-
-```bash
-# Read a specific field
-pass-cli agent item view \
-    --vault-name "Production" \
-    --item-name "DB password" \
-    --field password \
-    --reason "Running nightly backup"
-
-# Read a full item as JSON using the pass:// URI
-pass-cli agent item view \
-    --uri "pass://share_abc/item_xyz" \
-    --reason "Seeding test environment"
-```
-
-For more details on the `pass://` URI format and field access, see the [item](./item.md) documentation.
 
 ---
 
