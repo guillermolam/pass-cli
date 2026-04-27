@@ -17,7 +17,7 @@
  *
  */
 use crate::protos::action_payload::action_payload::{
-    ActionPayload as ProtoActionPayload, AgentAccessItem, action_payload::Content as ProtoContent,
+    ActionPayload as ProtoActionPayload, AgentAction, action_payload::Content as ProtoContent,
 };
 use anyhow::{Context, Result};
 
@@ -66,24 +66,27 @@ impl TryFrom<ProtoActionPayload> for ActionPayload {
 
 #[derive(Clone, Debug)]
 pub enum ActionPayloadContent {
-    AgentAccessItem {
+    AgentAction {
         reason: String,
         vault_name: Option<String>,
         item_name: Option<String>,
+        folder_name: Option<String>,
     },
 }
 
 impl From<ActionPayloadContent> for ProtoContent {
     fn from(payload: ActionPayloadContent) -> Self {
         match payload {
-            ActionPayloadContent::AgentAccessItem {
+            ActionPayloadContent::AgentAction {
                 reason,
                 vault_name,
                 item_name,
-            } => ProtoContent::AgentAccessItem(AgentAccessItem {
+                folder_name,
+            } => ProtoContent::AgentAction(AgentAction {
                 reason,
                 vault_name: vault_name.unwrap_or_else(|| "Unknown vault".to_string()),
                 item_name: item_name.unwrap_or_else(|| "Unknown item".to_string()),
+                folder_name: folder_name.unwrap_or_default(),
                 special_fields: Default::default(),
             }),
         }
@@ -93,10 +96,11 @@ impl From<ActionPayloadContent> for ProtoContent {
 impl From<ProtoContent> for ActionPayloadContent {
     fn from(payload: ProtoContent) -> Self {
         match payload {
-            ProtoContent::AgentAccessItem(agent_access_item) => Self::AgentAccessItem {
-                reason: agent_access_item.reason,
-                vault_name: some_if_not_empty(agent_access_item.vault_name),
-                item_name: some_if_not_empty(agent_access_item.item_name),
+            ProtoContent::AgentAction(agent_action) => Self::AgentAction {
+                reason: agent_action.reason,
+                vault_name: some_if_not_empty(agent_action.vault_name),
+                item_name: some_if_not_empty(agent_action.item_name),
+                folder_name: some_if_not_empty(agent_action.folder_name),
             },
         }
     }

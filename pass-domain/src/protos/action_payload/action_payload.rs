@@ -24,60 +24,67 @@
 /// of protobuf runtime.
 const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_3_7_2;
 
-// @@protoc_insertion_point(message:AgentAccessItem)
+// @@protoc_insertion_point(message:AgentAction)
 #[derive(PartialEq,Clone,Default,Debug)]
-pub struct AgentAccessItem {
+pub struct AgentAction {
     // message fields
-    // @@protoc_insertion_point(field:AgentAccessItem.reason)
+    // @@protoc_insertion_point(field:AgentAction.reason)
     pub reason: ::std::string::String,
-    // @@protoc_insertion_point(field:AgentAccessItem.vault_name)
+    // @@protoc_insertion_point(field:AgentAction.vault_name)
     pub vault_name: ::std::string::String,
-    // @@protoc_insertion_point(field:AgentAccessItem.item_name)
+    // @@protoc_insertion_point(field:AgentAction.item_name)
     pub item_name: ::std::string::String,
+    // @@protoc_insertion_point(field:AgentAction.folder_name)
+    pub folder_name: ::std::string::String,
     // special fields
-    // @@protoc_insertion_point(special_field:AgentAccessItem.special_fields)
+    // @@protoc_insertion_point(special_field:AgentAction.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
 }
 
-impl<'a> ::std::default::Default for &'a AgentAccessItem {
-    fn default() -> &'a AgentAccessItem {
-        <AgentAccessItem as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a AgentAction {
+    fn default() -> &'a AgentAction {
+        <AgentAction as ::protobuf::Message>::default_instance()
     }
 }
 
-impl AgentAccessItem {
-    pub fn new() -> AgentAccessItem {
+impl AgentAction {
+    pub fn new() -> AgentAction {
         ::std::default::Default::default()
     }
 
     fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
-        let mut fields = ::std::vec::Vec::with_capacity(3);
+        let mut fields = ::std::vec::Vec::with_capacity(4);
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
         fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
             "reason",
-            |m: &AgentAccessItem| { &m.reason },
-            |m: &mut AgentAccessItem| { &mut m.reason },
+            |m: &AgentAction| { &m.reason },
+            |m: &mut AgentAction| { &mut m.reason },
         ));
         fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
             "vault_name",
-            |m: &AgentAccessItem| { &m.vault_name },
-            |m: &mut AgentAccessItem| { &mut m.vault_name },
+            |m: &AgentAction| { &m.vault_name },
+            |m: &mut AgentAction| { &mut m.vault_name },
         ));
         fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
             "item_name",
-            |m: &AgentAccessItem| { &m.item_name },
-            |m: &mut AgentAccessItem| { &mut m.item_name },
+            |m: &AgentAction| { &m.item_name },
+            |m: &mut AgentAction| { &mut m.item_name },
         ));
-        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<AgentAccessItem>(
-            "AgentAccessItem",
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "folder_name",
+            |m: &AgentAction| { &m.folder_name },
+            |m: &mut AgentAction| { &mut m.folder_name },
+        ));
+        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<AgentAction>(
+            "AgentAction",
             fields,
             oneofs,
         )
     }
 }
 
-impl ::protobuf::Message for AgentAccessItem {
-    const NAME: &'static str = "AgentAccessItem";
+impl ::protobuf::Message for AgentAction {
+    const NAME: &'static str = "AgentAction";
 
     fn is_initialized(&self) -> bool {
         true
@@ -94,6 +101,9 @@ impl ::protobuf::Message for AgentAccessItem {
                 },
                 26 => {
                     self.item_name = is.read_string()?;
+                },
+                34 => {
+                    self.folder_name = is.read_string()?;
                 },
                 tag => {
                     ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
@@ -116,6 +126,9 @@ impl ::protobuf::Message for AgentAccessItem {
         if !self.item_name.is_empty() {
             my_size += ::protobuf::rt::string_size(3, &self.item_name);
         }
+        if !self.folder_name.is_empty() {
+            my_size += ::protobuf::rt::string_size(4, &self.folder_name);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
         self.special_fields.cached_size().set(my_size as u32);
         my_size
@@ -131,6 +144,9 @@ impl ::protobuf::Message for AgentAccessItem {
         if !self.item_name.is_empty() {
             os.write_string(3, &self.item_name)?;
         }
+        if !self.folder_name.is_empty() {
+            os.write_string(4, &self.folder_name)?;
+        }
         os.write_unknown_fields(self.special_fields.unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -143,42 +159,44 @@ impl ::protobuf::Message for AgentAccessItem {
         &mut self.special_fields
     }
 
-    fn new() -> AgentAccessItem {
-        AgentAccessItem::new()
+    fn new() -> AgentAction {
+        AgentAction::new()
     }
 
     fn clear(&mut self) {
         self.reason.clear();
         self.vault_name.clear();
         self.item_name.clear();
+        self.folder_name.clear();
         self.special_fields.clear();
     }
 
-    fn default_instance() -> &'static AgentAccessItem {
-        static instance: AgentAccessItem = AgentAccessItem {
+    fn default_instance() -> &'static AgentAction {
+        static instance: AgentAction = AgentAction {
             reason: ::std::string::String::new(),
             vault_name: ::std::string::String::new(),
             item_name: ::std::string::String::new(),
+            folder_name: ::std::string::String::new(),
             special_fields: ::protobuf::SpecialFields::new(),
         };
         &instance
     }
 }
 
-impl ::protobuf::MessageFull for AgentAccessItem {
+impl ::protobuf::MessageFull for AgentAction {
     fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
         static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
-        descriptor.get(|| file_descriptor().message_by_package_relative_name("AgentAccessItem").unwrap()).clone()
+        descriptor.get(|| file_descriptor().message_by_package_relative_name("AgentAction").unwrap()).clone()
     }
 }
 
-impl ::std::fmt::Display for AgentAccessItem {
+impl ::std::fmt::Display for AgentAction {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for AgentAccessItem {
+impl ::protobuf::reflect::ProtobufValue for AgentAction {
     type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
 }
 
@@ -203,64 +221,64 @@ impl ActionPayload {
         ::std::default::Default::default()
     }
 
-    // .AgentAccessItem agent_access_item = 1;
+    // .AgentAction agent_action = 1;
 
-    pub fn agent_access_item(&self) -> &AgentAccessItem {
+    pub fn agent_action(&self) -> &AgentAction {
         match self.content {
-            ::std::option::Option::Some(action_payload::Content::AgentAccessItem(ref v)) => v,
-            _ => <AgentAccessItem as ::protobuf::Message>::default_instance(),
+            ::std::option::Option::Some(action_payload::Content::AgentAction(ref v)) => v,
+            _ => <AgentAction as ::protobuf::Message>::default_instance(),
         }
     }
 
-    pub fn clear_agent_access_item(&mut self) {
+    pub fn clear_agent_action(&mut self) {
         self.content = ::std::option::Option::None;
     }
 
-    pub fn has_agent_access_item(&self) -> bool {
+    pub fn has_agent_action(&self) -> bool {
         match self.content {
-            ::std::option::Option::Some(action_payload::Content::AgentAccessItem(..)) => true,
+            ::std::option::Option::Some(action_payload::Content::AgentAction(..)) => true,
             _ => false,
         }
     }
 
     // Param is passed by value, moved
-    pub fn set_agent_access_item(&mut self, v: AgentAccessItem) {
-        self.content = ::std::option::Option::Some(action_payload::Content::AgentAccessItem(v))
+    pub fn set_agent_action(&mut self, v: AgentAction) {
+        self.content = ::std::option::Option::Some(action_payload::Content::AgentAction(v))
     }
 
     // Mutable pointer to the field.
-    pub fn mut_agent_access_item(&mut self) -> &mut AgentAccessItem {
-        if let ::std::option::Option::Some(action_payload::Content::AgentAccessItem(_)) = self.content {
+    pub fn mut_agent_action(&mut self) -> &mut AgentAction {
+        if let ::std::option::Option::Some(action_payload::Content::AgentAction(_)) = self.content {
         } else {
-            self.content = ::std::option::Option::Some(action_payload::Content::AgentAccessItem(AgentAccessItem::new()));
+            self.content = ::std::option::Option::Some(action_payload::Content::AgentAction(AgentAction::new()));
         }
         match self.content {
-            ::std::option::Option::Some(action_payload::Content::AgentAccessItem(ref mut v)) => v,
+            ::std::option::Option::Some(action_payload::Content::AgentAction(ref mut v)) => v,
             _ => panic!(),
         }
     }
 
     // Take field
-    pub fn take_agent_access_item(&mut self) -> AgentAccessItem {
-        if self.has_agent_access_item() {
+    pub fn take_agent_action(&mut self) -> AgentAction {
+        if self.has_agent_action() {
             match self.content.take() {
-                ::std::option::Option::Some(action_payload::Content::AgentAccessItem(v)) => v,
+                ::std::option::Option::Some(action_payload::Content::AgentAction(v)) => v,
                 _ => panic!(),
             }
         } else {
-            AgentAccessItem::new()
+            AgentAction::new()
         }
     }
 
     fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
         let mut fields = ::std::vec::Vec::with_capacity(1);
         let mut oneofs = ::std::vec::Vec::with_capacity(1);
-        fields.push(::protobuf::reflect::rt::v2::make_oneof_message_has_get_mut_set_accessor::<_, AgentAccessItem>(
-            "agent_access_item",
-            ActionPayload::has_agent_access_item,
-            ActionPayload::agent_access_item,
-            ActionPayload::mut_agent_access_item,
-            ActionPayload::set_agent_access_item,
+        fields.push(::protobuf::reflect::rt::v2::make_oneof_message_has_get_mut_set_accessor::<_, AgentAction>(
+            "agent_action",
+            ActionPayload::has_agent_action,
+            ActionPayload::agent_action,
+            ActionPayload::mut_agent_action,
+            ActionPayload::set_agent_action,
         ));
         oneofs.push(action_payload::Content::generated_oneof_descriptor_data());
         ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<ActionPayload>(
@@ -282,7 +300,7 @@ impl ::protobuf::Message for ActionPayload {
         while let Some(tag) = is.read_raw_tag_or_eof()? {
             match tag {
                 10 => {
-                    self.content = ::std::option::Option::Some(action_payload::Content::AgentAccessItem(is.read_message()?));
+                    self.content = ::std::option::Option::Some(action_payload::Content::AgentAction(is.read_message()?));
                 },
                 tag => {
                     ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
@@ -298,7 +316,7 @@ impl ::protobuf::Message for ActionPayload {
         let mut my_size = 0;
         if let ::std::option::Option::Some(ref v) = self.content {
             match v {
-                &action_payload::Content::AgentAccessItem(ref v) => {
+                &action_payload::Content::AgentAction(ref v) => {
                     let len = v.compute_size();
                     my_size += 1 + ::protobuf::rt::compute_raw_varint64_size(len) + len;
                 },
@@ -312,7 +330,7 @@ impl ::protobuf::Message for ActionPayload {
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
         if let ::std::option::Option::Some(ref v) = self.content {
             match v {
-                &action_payload::Content::AgentAccessItem(ref v) => {
+                &action_payload::Content::AgentAction(ref v) => {
                     ::protobuf::rt::write_message_field_with_cached_size(1, v, os)?;
                 },
             };
@@ -371,8 +389,8 @@ pub mod action_payload {
     #[non_exhaustive]
     // @@protoc_insertion_point(oneof:ActionPayload.content)
     pub enum Content {
-        // @@protoc_insertion_point(oneof_field:ActionPayload.agent_access_item)
-        AgentAccessItem(super::AgentAccessItem),
+        // @@protoc_insertion_point(oneof_field:ActionPayload.agent_action)
+        AgentAction(super::AgentAction),
     }
 
     impl ::protobuf::Oneof for Content {
@@ -393,11 +411,12 @@ pub mod action_payload {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x14action_payload.proto\"e\n\x0fAgentAccessItem\x12\x16\n\x06reason\
-    \x18\x01\x20\x01(\tR\x06reason\x12\x1d\n\nvault_name\x18\x02\x20\x01(\tR\
-    \tvaultName\x12\x1b\n\titem_name\x18\x03\x20\x01(\tR\x08itemName\"Z\n\rA\
-    ctionPayload\x12>\n\x11agent_access_item\x18\x01\x20\x01(\x0b2\x10.Agent\
-    AccessItemH\0R\x0fagentAccessItemB\t\n\x07contentb\x06proto3\
+    \n\x14action_payload.proto\"\x82\x01\n\x0bAgentAction\x12\x16\n\x06reaso\
+    n\x18\x01\x20\x01(\tR\x06reason\x12\x1d\n\nvault_name\x18\x02\x20\x01(\t\
+    R\tvaultName\x12\x1b\n\titem_name\x18\x03\x20\x01(\tR\x08itemName\x12\
+    \x1f\n\x0bfolder_name\x18\x04\x20\x01(\tR\nfolderName\"M\n\rActionPayloa\
+    d\x121\n\x0cagent_action\x18\x01\x20\x01(\x0b2\x0c.AgentActionH\0R\x0bag\
+    entActionB\t\n\x07contentb\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
@@ -416,7 +435,7 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
         let generated_file_descriptor = generated_file_descriptor_lazy.get(|| {
             let mut deps = ::std::vec::Vec::with_capacity(0);
             let mut messages = ::std::vec::Vec::with_capacity(2);
-            messages.push(AgentAccessItem::generated_message_descriptor_data());
+            messages.push(AgentAction::generated_message_descriptor_data());
             messages.push(ActionPayload::generated_message_descriptor_data());
             let mut enums = ::std::vec::Vec::with_capacity(0);
             ::protobuf::reflect::GeneratedFileDescriptor::new_generated(
