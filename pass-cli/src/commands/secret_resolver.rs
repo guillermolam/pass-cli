@@ -17,10 +17,12 @@
  *
  */
 
+use crate::commands::item::agent_monitor::send_reason_if_agent;
 use crate::helpers::CliPassClient as PassClient;
 use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
 use pass::FindItemQuery;
+use pass_domain::{EventAction, ItemId, ShareId};
 use regex::Regex;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -176,6 +178,16 @@ impl SecretResolver for PassClientResolver {
                 secret_ref.item_id
             )
         })?;
+
+        let share_id = ShareId::new(secret_ref.share_id.clone());
+        let item_id = ItemId::new(secret_ref.item_id.clone());
+        send_reason_if_agent(
+            &self.client,
+            EventAction::ItemRead,
+            &share_id,
+            Some(&item_id),
+        )
+        .await?;
 
         Ok(field.value())
     }

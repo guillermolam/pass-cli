@@ -18,6 +18,7 @@
  */
 
 use super::secret_resolver::{PassClientResolver, SecretReference, SecretResolver};
+use crate::commands::item::agent_monitor::ensure_reason_if_agent;
 use crate::helpers::CliPassClient as PassClient;
 use crate::telemetry::event::CommandEvent;
 use anyhow::{Context, Result, anyhow};
@@ -90,6 +91,7 @@ pub async fn run(
     out_file: Option<String>,
     client: PassClient,
 ) -> Result<()> {
+    ensure_reason_if_agent(&client)?;
     // Read input template
     let template = match in_file {
         Some(file_path) => fs::read_to_string(&file_path)
