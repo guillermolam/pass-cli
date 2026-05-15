@@ -66,6 +66,11 @@ pub enum ItemCommands {
         sort_by: Option<SortBy>,
         #[arg(long)]
         output: Option<OutputFormat>,
+        #[arg(
+            long,
+            help = "Include full item content in JSON output (requires --output json, not allowed with agent sessions)"
+        )]
+        show_secrets: bool,
     },
     #[command(about = "Create a new item")]
     Create {
@@ -200,10 +205,10 @@ pub async fn run(subcommand: ItemCommands, client: PassClient) -> Result<()> {
             filter_state,
             sort_by,
             output,
+            show_secrets,
         } => {
             let query = match (&share_id, &vault_name) {
                 (None, None) => {
-                    // Try to use default vault from settings
                     if let Some(default_share_id) =
                         settings_helper::get_default_share_id(&client).await?
                     {
@@ -216,7 +221,16 @@ pub async fn run(subcommand: ItemCommands, client: PassClient) -> Result<()> {
                 }
                 _ => ListItemsQuery::new(share_id, vault_name)?,
             };
-            list::run(client, query, filter_type, filter_state, sort_by, output).await
+            list::run(
+                client,
+                query,
+                filter_type,
+                filter_state,
+                sort_by,
+                output,
+                show_secrets,
+            )
+            .await
         }
         ItemCommands::Create { create_command } => create::run(create_command, client).await,
         ItemCommands::Delete { share_id, item_id } => {

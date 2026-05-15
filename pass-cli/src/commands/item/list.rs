@@ -20,15 +20,76 @@
 use crate::commands::{OutputFormat, settings_helper};
 use crate::helpers::CliPassClient as PassClient;
 use anyhow::{Context, Result, anyhow};
-use pass_domain::{Item, ItemContent, ItemState, ShareId};
+use pass_domain::{FolderId, Item, ItemContent, ItemFlag, ItemId, ItemState, ShareId, VaultId};
 use std::str::FromStr;
 
 #[derive(serde::Serialize)]
-struct ItemsList {
-    items: Vec<Item>,
+struct ItemsList<T: serde::Serialize> {
+    items: Vec<T>,
     #[cfg(feature = "internal")]
     #[serde(skip_serializing_if = "Option::is_none")]
     folders: Option<Vec<FolderInfo>>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+enum ItemType {
+    Note,
+    Login,
+    Alias,
+    CreditCard,
+    Identity,
+    SshKey,
+    Wifi,
+    Custom,
+}
+
+impl From<&ItemContent> for ItemType {
+    fn from(content: &ItemContent) -> Self {
+        match content {
+            ItemContent::Note(_) => ItemType::Note,
+            ItemContent::Login(_) => ItemType::Login,
+            ItemContent::Alias(_) => ItemType::Alias,
+            ItemContent::CreditCard(_) => ItemType::CreditCard,
+            ItemContent::Identity(_) => ItemType::Identity,
+            ItemContent::SshKey(_) => ItemType::SshKey,
+            ItemContent::Wifi(_) => ItemType::Wifi,
+            ItemContent::Custom(_) => ItemType::Custom,
+        }
+    }
+}
+
+// Fields here must never carry user-provided secret material (no content, note, extra_fields).
+#[derive(serde::Serialize)]
+struct ItemSummary {
+    id: ItemId,
+    share_id: ShareId,
+    vault_id: VaultId,
+    state: ItemState,
+    flags: Vec<ItemFlag>,
+    create_time: jiff::civil::DateTime,
+    modify_time: jiff::civil::DateTime,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    folder_id: Option<FolderId>,
+    title: String,
+    item_type: ItemType,
+}
+
+impl From<&Item> for ItemSummary {
+    fn from(item: &Item) -> Self {
+        ItemSummary {
+            id: item.id.clone(),
+            share_id: item.share_id.clone(),
+            vault_id: item.vault_id.clone(),
+            state: item.state,
+            flags: item.flags.clone(),
+            create_time: item.create_time,
+            modify_time: item.modify_time,
+            folder_id: item.folder_id.clone(),
+            title: item.content.title.clone(),
+            item_type: ItemType::from(&item.content.content),
+        }
+    }
 }
 
 #[cfg(feature = "internal")]
@@ -196,6 +257,7 @@ pub async fn run(
     filter_state: Option<FilterState>,
     sort_by: Option<SortBy>,
     output: Option<OutputFormat>,
+    show_secrets: bool,
 ) -> Result<()> {
     // Resolve output format from settings if not provided
     let output = match output {
@@ -204,6 +266,15 @@ pub async fn run(
             .await?
             .unwrap_or(OutputFormat::Human),
     };
+
+    if show_secrets && client.is_agent_session() {
+        return Err(anyhow!(
+            "--show-secrets is not allowed with an agent session"
+        ));
+    }
+    if show_secrets && !matches!(output, OutputFormat::Json) {
+        return Err(anyhow!("--show-secrets requires --output json"));
+    }
 
     let share_id = match query {
         ListItemsQuery::ShareId(id) => id,
@@ -252,12 +323,22 @@ pub async fn run(
                 }
             };
 
-            let list = ItemsList {
-                items,
-                #[cfg(feature = "internal")]
-                folders,
+            let json = if show_secrets {
+                let list = ItemsList {
+                    items,
+                    #[cfg(feature = "internal")]
+                    folders,
+                };
+                serde_json::to_string_pretty(&list).context("Error serializing items")?
+            } else {
+                let summaries: Vec<ItemSummary> = items.iter().map(ItemSummary::from).collect();
+                let list = ItemsList {
+                    items: summaries,
+                    #[cfg(feature = "internal")]
+                    folders,
+                };
+                serde_json::to_string_pretty(&list).context("Error serializing items")?
             };
-            let json = serde_json::to_string_pretty(&list).context("Error serializing items")?;
             println!("{json}");
         }
         OutputFormat::Human => {
@@ -286,6 +367,72 @@ pub async fn run(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pass_domain::{
+        ItemContent, ItemData, ItemId, ItemState, LoginItem, NoteItem, ShareId, VaultId,
+    };
+
+    fn make_item(content: ItemContent) -> Item {
+        Item {
+            id: ItemId::new("item-1".to_string()),
+            share_id: ShareId::new("share-1".to_string()),
+            vault_id: VaultId::new("vault-1".to_string()),
+            content: ItemData {
+                title: "My Item".to_string(),
+                note: String::new(),
+                item_uuid: "uuid-1".to_string(),
+                content,
+                extra_fields: vec![],
+                platform_specific: None,
+            },
+            state: ItemState::Active,
+            flags: vec![],
+            create_time: jiff::civil::DateTime::constant(2026, 1, 1, 0, 0, 0, 0),
+            modify_time: jiff::civil::DateTime::constant(2026, 1, 1, 0, 0, 0, 0),
+            folder_id: None,
+        }
+    }
+
+    #[test]
+    fn item_type_from_note() {
+        let item = make_item(ItemContent::Note(NoteItem));
+        let summary = ItemSummary::from(&item);
+        assert!(matches!(summary.item_type, ItemType::Note));
+        assert_eq!(summary.title, "My Item");
+    }
+
+    #[test]
+    fn item_type_from_login() {
+        let item = make_item(ItemContent::Login(LoginItem {
+            email: "a@b.com".to_string(),
+            username: "user".to_string(),
+            password: "secret".to_string(),
+            urls: vec![],
+            totp_uri: String::new(),
+            passkeys: vec![],
+        }));
+        let summary = ItemSummary::from(&item);
+        assert!(matches!(summary.item_type, ItemType::Login));
+    }
+
+    #[test]
+    fn summary_has_no_secrets_field() {
+        // ItemSummary must NOT contain a `content` field (which would hold secrets).
+        // We verify this by checking the serialized JSON keys.
+        let item = make_item(ItemContent::Note(NoteItem));
+        let summary = ItemSummary::from(&item);
+        let json = serde_json::to_string(&summary).unwrap();
+        assert!(!json.contains("\"content\""));
+        assert!(!json.contains("\"password\""));
+        assert!(!json.contains("\"note\":"));
+        assert!(!json.contains("\"extra_fields\""));
+        assert!(json.contains("\"title\""));
+        assert!(json.contains("\"item_type\""));
+    }
 }
 
 #[cfg(feature = "internal")]

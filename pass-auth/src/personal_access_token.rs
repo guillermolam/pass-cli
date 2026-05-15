@@ -72,7 +72,7 @@ pub struct PersonalAccessTokenLoginResult {
 #[derive(Debug, serde::Deserialize)]
 struct ApiErrorResponse {
     #[serde(rename = "Code")]
-    code: i32,
+    _code: i32,
     #[serde(rename = "Error")]
     error: String,
 }

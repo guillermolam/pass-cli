@@ -67,6 +67,11 @@ pub async fn run(client: PassClient, query: MoveItemQuery) -> Result<()> {
     let item_id = query.item_query.item_id(&from_share_id, &client).await?;
     let to_share_id = query.to_share_query.share_id(&client).await?;
 
+    let new_item_id = client
+        .move_item(&from_share_id, &item_id, &to_share_id)
+        .await
+        .context("Error moving item")?;
+
     send_reason_if_agent(
         &client,
         EventAction::ItemSoftDelete,
@@ -74,11 +79,6 @@ pub async fn run(client: PassClient, query: MoveItemQuery) -> Result<()> {
         Some(&item_id),
     )
     .await?;
-
-    let new_item_id = client
-        .move_item(&from_share_id, &item_id, &to_share_id)
-        .await
-        .context("Error moving item")?;
 
     send_reason_if_agent(
         &client,
