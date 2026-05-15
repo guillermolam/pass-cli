@@ -20,9 +20,9 @@
 use crate::commands::item::agent_monitor::send_reason_if_agent_with_name;
 use crate::commands::item::common::{ItemQuery, ShareQuery};
 use crate::commands::secret_resolver::ItemReference;
-use crate::commands::{settings_helper, OutputFormat};
+use crate::commands::{OutputFormat, settings_helper};
 use crate::helpers::CliPassClient as PassClient;
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use jiff::Timestamp;
 use pass::FindItemQuery;
 use pass_domain::{EventAction, Field, ShareId};
