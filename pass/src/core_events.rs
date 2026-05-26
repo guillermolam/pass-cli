@@ -144,11 +144,11 @@ async fn sync_core_events<C: PassClientContext>(client: &PassClient<C>) -> Resul
         let res = client.send(GET!("/core/v4/events/{current_id}")).await?;
         let response: CoreEventsResponse = assert_response!(res);
 
-        if let Some(ref user) = response.user {
-            if !user.keys.is_empty() {
-                debug!("Core event contains key changes, will refresh user keys");
-                keys_changed = true;
-            }
+        if let Some(ref user) = response.user
+            && !user.keys.is_empty()
+        {
+            debug!("Core event contains key changes, will refresh user keys");
+            keys_changed = true;
         }
 
         current_id = response.event_id;
