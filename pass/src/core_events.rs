@@ -23,6 +23,7 @@ use muon::GET;
 use pass_domain::AccountType;
 
 const CORE_EVENTS_SYNC_INTERVAL_SECS: i64 = 30 * 60; // 30 mins
+const CORE_EVENTS_MAX_PAGES: u32 = 50;
 
 #[derive(serde::Deserialize)]
 struct LatestEventResponse {
@@ -94,7 +95,7 @@ async fn sync_core_events<C: PassClientContext>(client: &PassClient<C>) -> Resul
 
     let mut keys_changed = false;
     debug!("Fetching core events since event_id={current_id}");
-    loop {
+    for page in 1..=CORE_EVENTS_MAX_PAGES {
         let res = client.send(GET!("/core/v4/events/{current_id}")).await?;
         let response: CoreEventsResponse = assert_response!(res);
 
@@ -110,7 +111,11 @@ async fn sync_core_events<C: PassClientContext>(client: &PassClient<C>) -> Resul
         if response.more == 0 {
             break;
         }
-        debug!("More core events pending, fetching next page from event_id={current_id}");
+        if page == CORE_EVENTS_MAX_PAGES {
+            debug!("Reached max pages ({CORE_EVENTS_MAX_PAGES}), stopping sync");
+        } else {
+            debug!("More core events pending, fetching next page from event_id={current_id}");
+        }
     }
 
     if keys_changed {
