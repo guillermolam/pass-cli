@@ -18,7 +18,7 @@
  */
 
 use anyhow::Result;
-use rusqlite::{params, Row};
+use rusqlite::{Row, params};
 
 #[derive(Debug, Clone)]
 pub struct CoreEventCursorModel {
