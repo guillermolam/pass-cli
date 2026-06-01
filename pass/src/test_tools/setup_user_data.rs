@@ -21,7 +21,7 @@ use crate::account::key_salts::{GetKeySaltsResponse, KeySaltResponse};
 use crate::test_tools::{Empty, MuonServerExt, success};
 use crate::user::access::{GetUserInfoResponse, MonitorStatus};
 use crate::{PassPlan, PlanType, UserDataSettings, UserInfo};
-use muon::common::Context;
+use muon::common::{Context, sdk::Sdk};
 use muon::rest::core::v4;
 use muon::{GET, Session};
 use muon_test::server::ProtonAPI;
@@ -147,10 +147,10 @@ pub fn setup_user_access(api: &ProtonAPI, plan_type: PlanType) {
     setup_user_access_with_limits(api, None, None, None, plan_type)
 }
 
-pub async fn init_session<C: Context>(api: &ProtonAPI, session: Session<C>) {
+pub async fn init_session<C: Context>(api: &ProtonAPI, session: Session<C>, sdk: &Sdk) {
     api.handler("/tests/ping", move |_| success(Empty));
     session
-        .send(GET!("/tests/ping"))
+        .send_with_sdk(GET!("/tests/ping"), sdk)
         .await
         .expect("Error setting up test session");
 }

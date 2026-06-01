@@ -22,6 +22,7 @@ pub use crate::PlanType;
 use crate::common::{CodeResponse, SUCCESS_CODE};
 use crate::test_tools::client_features::TestClientFeatures;
 use crate::test_tools::{init_session, setup_user_access};
+use muon::common::sdk::Sdk;
 pub use muon::http::Method;
 use muon_test::server::{ProtonAPI, Request, Response};
 use std::sync::Arc;
@@ -100,11 +101,14 @@ pub async fn make_test_pass_client(
         .new_session_without_credentials(())
         .await
         .expect("Error creating session");
-    init_session(api, session).await;
+
+    let sdk = test_sdk();
+    init_session(api, session, &sdk).await;
     TestPassClient::new(
         raw_client,
         Arc::new(TestClientFeatures::new(key)),
         pass_domain::AccountType::User,
+        sdk,
     )
 }
 
@@ -118,12 +122,18 @@ pub async fn make_test_pass_pat_client(
         .new_session_without_credentials(())
         .await
         .expect("Error creating session");
-    init_session(api, session).await;
+    let sdk = test_sdk();
+    init_session(api, session, &sdk).await;
     TestPassClient::new(
         raw_client,
         Arc::new(TestClientFeatures::new(key)),
         pass_domain::AccountType::PersonalAccessToken,
+        sdk,
     )
+}
+
+fn test_sdk() -> Sdk {
+    Sdk::new("pass-cli", "1.0.0").expect("Error creating SDK")
 }
 
 // Create a TestPassClient with full user data setup (addresses, keys, salts)

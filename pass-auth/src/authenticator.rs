@@ -25,6 +25,7 @@ use crate::storage::SessionStorage;
 use crate::store::PassSessionStore;
 use crate::{extra_password, interactive_login, personal_access_token, post_login, web_login};
 use anyhow::{Context, Result, bail};
+use muon::common::sdk::Sdk;
 use pass::{FirstTimeSetupKey, PassClient};
 use pass_domain::{AccountType, LocalKeyProvider};
 use std::sync::{Arc, RwLock};
@@ -36,6 +37,7 @@ pub struct Authenticator {
     event_handler: Arc<dyn AuthEventHandler>,
     credential_provider: Arc<dyn CredentialProvider>,
     config: ClientConfig,
+    sdk: Sdk,
 }
 
 impl Authenticator {
@@ -59,6 +61,7 @@ impl Authenticator {
         event_handler: Arc<dyn AuthEventHandler>,
         credential_provider: Arc<dyn CredentialProvider>,
         config: ClientConfig,
+        sdk: Sdk,
     ) -> Self {
         Self {
             key_provider,
@@ -66,6 +69,7 @@ impl Authenticator {
             event_handler,
             credential_provider,
             config,
+            sdk,
         }
     }
 
@@ -107,10 +111,14 @@ impl Authenticator {
             .context("Error creating session")?;
 
         // Perform web login
-        let login_result =
-            web_login::perform_web_login(&session, store.clone(), self.event_handler.clone())
-                .await
-                .context("Error in web login flow")?;
+        let login_result = web_login::perform_web_login(
+            &session,
+            store.clone(),
+            self.event_handler.clone(),
+            &self.sdk,
+        )
+        .await
+        .context("Error in web login flow")?;
 
         session.remove_auth().await;
         let _ = client
@@ -120,7 +128,8 @@ impl Authenticator {
 
         Self::persist_store(&store).await?;
 
-        let pass_client = PassClient::new(client, client_features, AccountType::User);
+        let pass_client =
+            PassClient::new(client, client_features, AccountType::User, self.sdk.clone());
 
         // Check if extra password is needed
         let needs_extra_password = {
@@ -135,6 +144,7 @@ impl Authenticator {
                 &session,
                 self.credential_provider.clone(),
                 self.event_handler.clone(),
+                &self.sdk,
             )
             .await?;
         }
@@ -189,6 +199,7 @@ impl Authenticator {
             store.clone(),
             self.credential_provider.clone(),
             self.event_handler.clone(),
+            &self.sdk,
         )
         .await
         .context("Error in interactive login flow")?;
@@ -197,7 +208,12 @@ impl Authenticator {
 
         info!("Logged in user: {}", username);
 
-        let pass_client = PassClient::new(auth_result.client, client_features, AccountType::User);
+        let pass_client = PassClient::new(
+            auth_result.client,
+            client_features,
+            AccountType::User,
+            self.sdk.clone(),
+        );
 
         self.event_handler
             .on_info(&format!("Successfully logged in as {}", username))
@@ -243,7 +259,7 @@ impl Authenticator {
 
         // Perform personal access token login
         let login_result =
-            personal_access_token::perform_personal_access_token_login(&session, &token)
+            personal_access_token::perform_personal_access_token_login(&session, &token, &self.sdk)
                 .await
                 .context("Error in personal access token login flow")?;
 
@@ -258,8 +274,12 @@ impl Authenticator {
             .context("Error storing personal access token session")?;
 
         // Create an authenticated client so we can fetch PAT flags from the self endpoint
-        let mut pass_client =
-            PassClient::new(client, client_features, AccountType::PersonalAccessToken);
+        let mut pass_client = PassClient::new(
+            client,
+            client_features,
+            AccountType::PersonalAccessToken,
+            self.sdk.clone(),
+        );
 
         // Determine if this PAT was issued for an agent by checking the flags from the self endpoint
         let account_type = match pass_client.get_personal_access_token_pass_agent().await {

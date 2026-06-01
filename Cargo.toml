@@ -11,8 +11,8 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-muon = { version = "2.3.0", registry = "proton", features = ["transport-hyper", "full-base", "unsealed", "other-platform"] }
-muon-test = { version = "1.0.0", registry = "proton" }
+muon = { version = "2.4.1", registry = "proton", features = ["transport-hyper", "full-base", "unsealed", "other-platform"] }
+muon-test = { version = "1.1.0", registry = "proton" }
 proton-crypto = { version = "0.12.2", registry = "proton", default-features = false, features = ["rustpgp"] }
 proton-crypto-account = { version = "0.18.2", registry = "proton", default-features = false, features = ["rustpgp"] }
 

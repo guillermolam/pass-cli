@@ -26,6 +26,7 @@ use base64::Engine;
 use muon::SessionCredentials;
 use muon::app::{AppName, AppVersion, SemVer};
 use muon::auth::{Auth, Tokens};
+use muon::common::sdk::Sdk;
 use muon::env::{Env, Environment};
 use muon::{GET, Session};
 use pass_domain::aes_gcm::aead::consts::U16;
@@ -139,10 +140,13 @@ fn decrypt_payload(encryption_key: &[u8], payload: &str) -> Result<SessionPayloa
     Ok(parsed)
 }
 
-async fn fetch_session_fork(session: &Session<ProdContext>) -> Result<SessionForkResponse> {
+async fn fetch_session_fork(
+    session: &Session<ProdContext>,
+    sdk: &Sdk,
+) -> Result<SessionForkResponse> {
     info!("Fetching session fork...");
     let res = session
-        .send(GET!("/auth/sessions/forks"))
+        .send_with_sdk(GET!("/auth/sessions/forks"), sdk)
         .await
         .context("Error requesting session fork")?;
 
@@ -161,6 +165,7 @@ async fn poll_session_fork(
     session: &Session<ProdContext>,
     selector: &str,
     event_handler: Arc<dyn AuthEventHandler>,
+    sdk: &Sdk,
 ) -> Result<SessionResponse> {
     info!("Starting to poll for authentication...");
 
@@ -175,7 +180,10 @@ async fn poll_session_fork(
             .await?;
 
         let res = match session
-            .send(GET!("/auth/sessions/forks/{selector}", selector = selector))
+            .send_with_sdk(
+                GET!("/auth/sessions/forks/{selector}", selector = selector),
+                sdk,
+            )
             .await
         {
             Ok(res) => res,
@@ -253,13 +261,14 @@ pub async fn perform_web_login(
     session: &Session<ProdContext>,
     store: Arc<RwLock<PassSessionStore>>,
     event_handler: Arc<dyn AuthEventHandler>,
+    sdk: &Sdk,
 ) -> Result<WebLoginResult> {
     let env = {
         let store_guard = store.read().expect("store rwlock poisoned");
         store_guard.env.clone()
     };
 
-    let fork_response = fetch_session_fork(session)
+    let fork_response = fetch_session_fork(session, sdk)
         .await
         .context("Error fetching session fork")?;
 
@@ -273,7 +282,7 @@ pub async fn perform_web_login(
     // Notify event handler of URL generation
     event_handler.on_web_login_url_generated(&url).await?;
 
-    let response = poll_session_fork(session, &fork_response.selector, event_handler.clone())
+    let response = poll_session_fork(session, &fork_response.selector, event_handler.clone(), sdk)
         .await
         .context("Error polling for authentication")?;
 
