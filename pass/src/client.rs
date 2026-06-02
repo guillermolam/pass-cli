@@ -22,7 +22,7 @@ use crate::error::SessionInvalidatedError;
 use crate::muon_ext::MuonErrorExt;
 use anyhow::{Context, Result};
 use muon::Session;
-use muon::common;
+use muon::common::{self, sdk::Sdk};
 use pass_domain::{AccountType, ClientFeatures};
 use std::sync::Arc;
 use tracing::warn;
@@ -38,6 +38,7 @@ pub struct PassClient<C: PassClientContext = common::StubContext> {
     pub(crate) client_features: Arc<dyn ClientFeatures>,
     pub(crate) memory_xor_key: u8,
     pub(crate) account_type: AccountType,
+    pub(crate) sdk: Sdk,
 }
 
 impl<C: PassClientContext> Clone for PassClient<C> {
@@ -48,6 +49,7 @@ impl<C: PassClientContext> Clone for PassClient<C> {
             client_features: self.client_features.clone(),
             memory_xor_key: self.memory_xor_key,
             account_type: self.account_type,
+            sdk: self.sdk.clone(),
         }
     }
 }
@@ -57,13 +59,15 @@ impl<C: PassClientContext> PassClient<C> {
         client: muon::Client<C>,
         client_features: Arc<dyn ClientFeatures>,
         account_type: AccountType,
+        sdk: Sdk,
     ) -> Self {
         Self {
             client,
             client_features,
+            account_type,
+            sdk,
             cache: Cache::new(),
             memory_xor_key: pass_domain::crypto::generate_random_byte(),
-            account_type,
         }
     }
 
@@ -95,11 +99,16 @@ impl<C: PassClientContext> PassClient<C> {
         // GET requests are always safe to retry — mark them idempotent so muon v2
         // transparently retries on broken pipe (stale pooled connection).
         let req = if req.get_method() == muon::http::Method::GET {
-            req.service_type(muon::common::ServiceType::Normal, true)
+            req.service_type(common::ServiceType::Normal, true)
         } else {
             req
         };
-        match self.get_session().await?.send(req).await {
+        match self
+            .get_session()
+            .await?
+            .send_with_sdk(req, &self.sdk)
+            .await
+        {
             Ok(r) => Ok(r),
             Err(e) => {
                 if e.is_logged_out_error() {

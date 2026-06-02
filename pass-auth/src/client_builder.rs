@@ -144,7 +144,9 @@ pub async fn create_client(
         transport_builder = transport_builder.proxy(Proxy::Env(EnvProxy::all("HTTPS_PROXY")));
     }
 
-    let mut builder = transport_builder.with_persistence(shared_store);
+    let mut builder = transport_builder
+        .with_persistence(shared_store)
+        .without_cookie_store();
 
     // Add XDEBUG_SESSION header if configured
     if let Some(ref debug_config) = config.debug_config

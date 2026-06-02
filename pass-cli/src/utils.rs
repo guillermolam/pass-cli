@@ -20,6 +20,7 @@
 use anyhow::Context;
 use jiff::Timestamp;
 use jiff::tz::TimeZone;
+use muon::common::sdk::Sdk;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -98,6 +99,10 @@ pub fn format_date(timestamp: i64) -> String {
     };
     let zoned = ts.to_zoned(TimeZone::UTC);
     format!("{}-{:02}-{:02}", zoned.year(), zoned.month(), zoned.day())
+}
+
+pub fn create_sdk() -> anyhow::Result<Sdk> {
+    Sdk::new("pass-cli", env!("CARGO_PKG_VERSION")).context("Cannot create Sdk instance")
 }
 
 /// Format a timestamp (UTC) to current system timezine with time portion

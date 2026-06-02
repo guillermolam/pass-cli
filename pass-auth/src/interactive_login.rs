@@ -23,6 +23,7 @@ use crate::os::{ProdClient, ProdContext};
 use crate::store::PassSessionStore;
 use anyhow::{Context, bail};
 use muon::auth::LoginFlow;
+use muon::common::sdk::Sdk;
 use muon::{GET, Session};
 use std::sync::{Arc, RwLock};
 use zeroize::Zeroizing;
@@ -38,6 +39,7 @@ pub async fn perform_interactive_login(
     store: Arc<RwLock<PassSessionStore>>,
     credential_provider: Arc<dyn CredentialProvider>,
     event_handler: Arc<dyn AuthEventHandler>,
+    sdk: &Sdk,
 ) -> anyhow::Result<AuthenticationResult> {
     let session = client
         .new_session_without_credentials(())
@@ -89,11 +91,12 @@ pub async fn perform_interactive_login(
 
     if needs_extra_password {
         info!("Account needs Pass extra password");
-        extra_password::handle_extra_password(&session, credential_provider, event_handler).await?;
+        extra_password::handle_extra_password(&session, credential_provider, event_handler, sdk)
+            .await?;
     }
 
     // Initialize session to verify it works
-    init_session(&session)
+    init_session(&session, sdk)
         .await
         .context("Error initializing session")?;
 
@@ -103,9 +106,9 @@ pub async fn perform_interactive_login(
     })
 }
 
-async fn init_session(session: &Session<ProdContext>) -> anyhow::Result<()> {
+async fn init_session(session: &Session<ProdContext>, sdk: &Sdk) -> anyhow::Result<()> {
     session
-        .send(GET!("/tests/ping"))
+        .send_with_sdk(GET!("/tests/ping"), sdk)
         .await
         .context("Error initializing session")?;
     Ok(())

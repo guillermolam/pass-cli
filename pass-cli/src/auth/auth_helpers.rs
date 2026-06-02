@@ -63,6 +63,7 @@ pub fn create_authenticator_with_config(
 ) -> Result<Authenticator> {
     let session_file_path = config.base_dir.join(SESSION_FILE_NAME);
     let storage = Arc::new(FileSystemSessionStorage::new(session_file_path));
+    let sdk = crate::utils::create_sdk()?;
 
     Ok(Authenticator::new(
         client_features.key_provider.clone(),
@@ -70,5 +71,6 @@ pub fn create_authenticator_with_config(
         Arc::new(TerminalEventHandler),
         Arc::new(CliCredentialProvider),
         config,
+        sdk,
     ))
 }

@@ -23,6 +23,7 @@ use base64::Engine;
 use muon::POST;
 use muon::SessionCredentials;
 use muon::auth::{Auth, Tokens};
+use muon::common::sdk::Sdk;
 use zeroize::Zeroizing;
 
 const TOKEN_PREFIX: &str = "pst_";
@@ -120,6 +121,7 @@ pub fn parse_personal_access_token_token(
 async fn create_personal_access_token_session(
     session: &muon::Session<ProdContext>,
     token: &str,
+    sdk: &Sdk,
 ) -> Result<PersonalAccessTokenSessionResponse> {
     info!("Creating personal access token session...");
 
@@ -127,12 +129,11 @@ async fn create_personal_access_token_session(
         token: token.to_string(),
     };
 
+    let req = POST!("/account/v4/personal-access-token/session")
+        .body_json(&request)
+        .context("Failed to create personal access token session request")?;
     let res = session
-        .send(
-            POST!("/account/v4/personal-access-token/session")
-                .body_json(&request)
-                .context("Failed to create personal access token session request")?,
-        )
+        .send_with_sdk(req, sdk)
         .await
         .context("Error requesting personal access token session")?;
 
@@ -166,6 +167,7 @@ async fn create_personal_access_token_session(
 pub async fn perform_personal_access_token_login(
     session: &muon::Session<ProdContext>,
     token_string: &str,
+    sdk: &Sdk,
 ) -> Result<PersonalAccessTokenLoginResult> {
     // Parse the token
     let parsed = parse_personal_access_token_token(token_string)
@@ -174,7 +176,7 @@ pub async fn perform_personal_access_token_login(
     info!("Personal access token token parsed successfully");
 
     // Request personal access token session
-    let response = create_personal_access_token_session(session, &parsed.token)
+    let response = create_personal_access_token_session(session, &parsed.token, sdk)
         .await
         .context("Error creating personal access token session")?;
 

@@ -21,6 +21,7 @@ use crate::callbacks::{AuthEventHandler, CredentialProvider};
 use crate::error::AuthError;
 use crate::os::ProdContext;
 use anyhow::{Context, anyhow};
+use muon::common::sdk::Sdk;
 use muon::transport::http::Status;
 use muon::{GET, POST, Session};
 use proton_crypto::srp::SRPProvider;
@@ -29,8 +30,9 @@ use std::sync::Arc;
 async fn perform_extra_password_auth(
     session: &Session<ProdContext>,
     password: String,
+    sdk: &Sdk,
 ) -> Result<(), AuthError> {
-    let srp_info = get_srp_info(session).await?;
+    let srp_info = get_srp_info(session, sdk).await?;
 
     let provider = proton_crypto::new_srp_provider();
     let proof = provider
@@ -49,7 +51,7 @@ async fn perform_extra_password_auth(
         client_proof: proof.proof,
         srp_session_id: srp_info.srp_session_id,
     };
-    send_srp_proofs(session, proofs).await?;
+    send_srp_proofs(session, proofs, sdk).await?;
     session
         .refresh_auth()
         .await
@@ -78,9 +80,12 @@ struct ExtraPasswordSrpInfo {
     srp_salt: String,
 }
 
-async fn get_srp_info(session: &Session<ProdContext>) -> anyhow::Result<ExtraPasswordSrpInfo> {
+async fn get_srp_info(
+    session: &Session<ProdContext>,
+    sdk: &Sdk,
+) -> anyhow::Result<ExtraPasswordSrpInfo> {
     let res = session
-        .send(GET!("/pass/v1/user/srp/info"))
+        .send_with_sdk(GET!("/pass/v1/user/srp/info"), sdk)
         .await
         .context("Error requesting SRP info for extra password")?;
     if res.status() != Status::OK {
@@ -104,12 +109,13 @@ struct ExtraPasswordProofs {
 async fn send_srp_proofs(
     session: &Session<ProdContext>,
     proofs: ExtraPasswordProofs,
+    sdk: &Sdk,
 ) -> Result<(), AuthError> {
     let req = POST!("/pass/v1/user/srp/auth")
         .body_json(proofs)
         .context("Error creating SRP request")?;
     let res = session
-        .send(req)
+        .send_with_sdk(req, sdk)
         .await
         .context("Error sending SRP proofs")?;
     match res.status() {
@@ -126,6 +132,7 @@ pub async fn handle_extra_password(
     session: &Session<ProdContext>,
     credential_provider: Arc<dyn CredentialProvider>,
     event_handler: Arc<dyn AuthEventHandler>,
+    sdk: &Sdk,
 ) -> Result<(), anyhow::Error> {
     event_handler.on_extra_password_required().await?;
 
@@ -140,11 +147,11 @@ pub async fn handle_extra_password(
         }
 
         let extra_password = credential_provider.get_extra_password().await?;
-        match perform_extra_password_auth(session, extra_password).await {
+        match perform_extra_password_auth(session, extra_password, sdk).await {
             Ok(()) => {
                 // Initialize session to verify it works
                 session
-                    .send(GET!("/tests/ping"))
+                    .send_with_sdk(GET!("/tests/ping"), sdk)
                     .await
                     .context("Error initializing session")?;
                 return Ok(());
