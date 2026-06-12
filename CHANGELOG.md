@@ -1,183 +1,193 @@
+## 2.1.3 (2026-06-12)
+
+### Fixes :bug:
+
+- Enforce signature verification upon data decryption in some code paths.
+
+### Other
+
+- Upgraded dependencies.
+
 ## 2.1.2 (2026-05-29)
 
-## Other
+### Other
 
 - Source code is open sourced.
 
 ## 2.1.1 (2026-05-27)
 
-## Other
+### Other
 
 - Check for new user keys.
 
 ## 2.1.0 (2026-05-20)
 
-## Features :tada:
+### Features :tada:
 
 - Agent mode: Agents need to provide reasons on what actions they perform. Users can monitor those actions.
 
 ## 2.0.3 (2026-05-19)
 
-## Fixes :bug:
+### Fixes :bug:
 
 - Add `--show-secrets` flag to list items with secrets.
 - Catch error message for 400 response when doing updates.
 - Skip production information in the `info` command.
 
-## Other
+### Other
 
 - Upgrade keyring dependencies to 1.0.0.
 - Updated dependencies.
 
 ## 2.0.2 (2026-04-23)
 
-## Other
+### Other
 
 - Dependency upgrades.
 - `pass-cli` is back to homebrew as a `formula` instead of a `cask` due to notarization issues upon install.
 
 ## 2.0.1 (2026-04-22)
 
-## Fixes :bug:
+### Fixes :bug:
 
 - Improved session persistance to avoid bugs that prevented logged-in sessions from performing requests.
 - Now `pass-cli` is available as a homebrew `cask` rather than a `formula` and offers Linux variants.
 
 ## 2.0.0 (2026-04-13)
 
-## Features :tada:
+### Features :tada:
 
 - Migration to `muon v2` for better and more stable networking and session management.
 
 ## 1.10.0 (2026-04-08)
 
-## Features :tada:
+### Features :tada:
 
 - Personal Access Token support.
 
 ## 1.9.0 (2026-03-23)
 
-## Features :tada:
+### Features :tada:
 
 - Support for `ssh-agent daemon` to have the SSH agent run in the background.
 
-## Fixes :bug:
+### Fixes :bug:
 
 - Improve invite acceptance flow.
 - Allow to print SSH Key keys with `private key` and `public key` field specifiers.
 
-## Other
+### Other
 
 - Updated dependencies.
 - Fixed docs typos.
 
 ## 1.8.0 (2026-03-23)
 
-## Features :tada:
+### Features :tada:
 
 - Support for Linux DBUS integration.
 
-## Other
+### Other
 
 - Updated dependencies.
 
 ## 1.7.0 (2026-03-18)
 
-## Features :tada:
+### Features :tada:
 
 - Add support for PKCS#8 SSH keys in the SSH agent.
 
-## Fixes :bug:
+### Fixes :bug:
 
 - `pass-cli run` with env files now doesn't drop values that are not pass secret references.
 
-## Other
+### Other
 
 - Updated dependencies.
 - Improved local secret key storage in system keyrings.
 
 ## 1.6.1 (2026-03-10)
 
-## Other
+### Other
 
 - Fixed codesign of macOS binaries.
 
 ## 1.6.0 (2026-03-09)
 
-## Features :tada:
+### Features :tada:
 
 - CLI flag completion for Bash/Zsh/Fish (Thanks to @vichid for the contribution)
 
-## Fixes :bug:
+### Fixes :bug:
 
 - Fix support for RSA4096 keys in the SSH agent
 
 ## 1.5.2 (2026-02-23)
 
-## Fixes :bug:
+### Fixes :bug:
 
 - Add missing DLL for Windows installs
 
 ## 1.5.1 (2026-02-19)
 
-## Other
+### Other
 
 - Improved behaviour on session expiration
 
 ## 1.5.0 (2026-02-18)
 
-## Features :tada:
+### Features :tada:
 
 - Offer `ssh-agent debug` command to debug whether the items of a vault can be used as SSH keys
 - Improvements on crypto dependencies
 
 ## 1.4.3 (2026-02-09)
 
-## Other
+### Other
 
 - Renamed internal config variables to avoid clashing with commonly defined variables (`ENVIRONMENT`)
 
 ## 1.4.2 (2026-02-04)
 
-## Other
+### Other
 
 - Improvements on permission handling
 - Add modify time to `item view` in JSON output format
 
 ## 1.4.1 (2026-01-21)
 
-## Fixes :bug:
+### Fixes :bug:
 
 - Fixed `pass-cli item update` duplicating custom fields when updating an item
 
 ## 1.4.0 (2026-01-20)
 
-## Features :tada:
+### Features :tada:
 
 - Added `pass-cli settings` to set default values for vault and output format
 
 ## 1.3.5 (2026-01-12)
 
-## Other
+### Other
 
 - Make `pass-cli info` capable of printing the output in JSON format
 
 ## 1.3.4 (2026-01-12)
 
-## Other
+### Other
 
 - Improve windows SSH agent messages and documentation
 
 ## 1.3.3 (2026-01-09)
 
-## Other
+### Other
 
 - Offer `--capitalize` alongside `--capitalise` for `password generate passphrase`
 - Documentation fixes
 
 ## 1.3.2 (2025-12-18)
 
-## Features :tada:
+### Features :tada:
 
 - `ssh-agent`: now supports ssh certificates added via `ssh-add`
 
