@@ -73,7 +73,7 @@ impl UserEventsHandler for SshAgentEventHandler {
             *errors
         };
 
-        if error_count == MAX_ERRORS {
+        if error_count >= MAX_ERRORS {
             return Ok(ContinuationStrategy::Break { err });
         }
 
