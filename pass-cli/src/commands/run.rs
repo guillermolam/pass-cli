@@ -24,7 +24,7 @@ use crate::telemetry::event::CommandEvent;
 use crate::commands::item::agent_monitor::ensure_reason_if_agent;
 use anyhow::{Context, Result, anyhow, bail};
 use regex::Regex;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Command, Stdio};
@@ -33,7 +33,7 @@ use std::thread::JoinHandle;
 
 const STDIN_BUFF_SIZE: usize = 1024;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct EnvVar {
     name: String,
     value: String,
@@ -198,13 +198,20 @@ fn merge_resolved_env(
 }
 
 /// Create a regex pattern to match secrets for output masking
-fn create_masking_regex(resolved_env: &HashMap<String, String>) -> Result<Option<Regex>> {
+fn create_masking_regex(
+    resolved_env: &HashMap<String, String>,
+    original_env_vars: &[EnvVar],
+) -> Result<Option<Regex>> {
     let mut secret_values = Vec::new();
 
+    let secret_ref_names: HashSet<String> = original_env_vars
+        .iter()
+        .filter(|v| find_pass_uri(&v.value).is_some())
+        .map(|v| v.name.clone())
+        .collect();
+
     for (name, value) in resolved_env {
-        // Only collect values that originally contained pass:// URIs
-        let original_env_value = env::var(name).unwrap_or_default();
-        if find_pass_uri(&original_env_value).is_some() {
+        if secret_ref_names.contains(name) {
             // Escape special regex characters and add to list
             let escaped = regex::escape(value);
             if !escaped.is_empty() && escaped.len() >= 5 {
@@ -325,6 +332,7 @@ async fn execute_command(
     command_args: &[String],
     resolved_env: HashMap<String, String>,
     no_masking: bool,
+    original_env_vars: Vec<EnvVar>,
 ) -> Result<i32> {
     if command_args.is_empty() {
         bail!("No command provided");
@@ -337,7 +345,7 @@ async fn execute_command(
     let masking_regex = if no_masking {
         None
     } else {
-        create_masking_regex(&resolved_env)?
+        create_masking_regex(&resolved_env, &original_env_vars)?
     };
 
     // Start the subprocess
@@ -414,16 +422,16 @@ pub async fn run(
         find_secret_references(&env_vars).context("Failed to find secret references")?;
 
     let resolved_env = if secret_refs.is_empty() {
-        merge_resolved_env(env_vars, HashMap::new())
+        merge_resolved_env(env_vars.clone(), HashMap::new())
     } else {
         // Resolve secrets and create environment
-        resolve_secrets_and_create_env(env_vars, secret_refs, client)
+        resolve_secrets_and_create_env(env_vars.clone(), secret_refs, client)
             .await
             .context("Failed to resolve secrets")?
     };
 
     // Execute the command with resolved environment
-    let exit_code = execute_command(&command_args, resolved_env, no_masking)
+    let exit_code = execute_command(&command_args, resolved_env, no_masking, env_vars)
         .await
         .context("Failed to execute command with secrets")?;
 
@@ -589,5 +597,41 @@ _PRIVATE=secret
 
         assert_eq!(merged.get("A_VALUE"), Some(&"somevalue".to_string()));
         assert_eq!(merged.get("B_VALUE"), Some(&"TestFieldValue".to_string()));
+    }
+
+    #[test]
+    fn test_create_masking_regex_includes_dotenv_only_secrets() {
+        // Simulate the scenario where API_KEY comes only from a .env file
+        // (not set in the parent process environment).
+        let env_vars = vec![
+            EnvVar {
+                name: "API_KEY".to_string(),
+                value: "pass://Production/API/password".to_string(),
+            },
+            EnvVar {
+                name: "NORMAL_VAR".to_string(),
+                value: "normal_value".to_string(),
+            },
+        ];
+
+        let mut resolved_env = HashMap::new();
+        resolved_env.insert("API_KEY".to_string(), "supersecretvalue123".to_string());
+        resolved_env.insert("NORMAL_VAR".to_string(), "normal_value".to_string());
+
+        // Even though API_KEY is not in env::var(), the original env_vars
+        // record shows it had a pass:// URI, so it must be masked.
+        let result = create_masking_regex(&resolved_env, &env_vars).unwrap();
+        assert!(
+            result.is_some(),
+            "masking regex must be created for .env-only secrets"
+        );
+
+        let regex = result.unwrap();
+        let line = "The key is supersecretvalue123";
+        let masked = mask_line(line, &Some(regex));
+        assert_eq!(
+            masked, "The key is <concealed by Proton Pass>",
+            "resolved .env secret value must be masked in output"
+        );
     }
 }
