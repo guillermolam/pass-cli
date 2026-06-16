@@ -30,12 +30,12 @@ Lock the current session with a PIN.
 pass-cli session lock [--lock-time SECONDS]
 ```
 
-You will be prompted to enter a PIN. The PIN is not stored anywhere — it is sent to the Proton Pass API to establish the
+You will be prompted to enter a PIN. The PIN is not stored anywhere, it is sent to the Proton Pass API to establish the
 lock. You must use the same PIN to unlock or remove the lock later.
 
 **Options:**
 
-- `--lock-time SECONDS` — Time in seconds before the session auto-unlocks. Must be between 30 and 900. Default: `300` (5
+- `--lock-time SECONDS` Time in seconds before the session auto-unlocks. Must be between 30 and 900. Default: `300` (5
   minutes).
 
 **Examples:**
@@ -100,15 +100,17 @@ pass-cli session remove-lock
 pass-cli info
 ```
 
-The output includes a `Session lock` field that shows whether the current session has an active lock.
+The output includes a `Session has lock` field that shows whether the current session has an active lock. Having a
+session lock does not mean that the session is locked at this moment. It means that if unused it will lock
+automatically.
 
 ## Security considerations
 
-- **PIN strength** — Choose a PIN that is not trivially guessable. There is no minimum length enforced by the CLI, but a
+- **PIN strength** Choose a PIN that is not trivially guessable. There is no minimum length enforced by the CLI, but a
   longer PIN is harder to brute-force.
-- **Auto-unlock timeout** — Keep `--lock-time` short on shared or unattended systems. The default of 300 seconds is a
+- **Auto-unlock timeout** Keep `--lock-time` short on shared or unattended systems. The default of 300 seconds is a
   reasonable balance for interactive use.
-- **Session vs. logout** — Locking a session is not a substitute for `logout`. A locked session is still authenticated;
+- **Session vs. logout** Locking a session is not a substitute for `logout`. A locked session is still authenticated;
   it is just gated by the PIN. Use `logout` when you want to fully terminate the session.
-- **PIN not stored** — The PIN is never written to disk or the keyring. If you forget it, you cannot unlock or remove
+- **PIN not stored** The PIN is never written to disk or the keyring. If you forget it, you cannot unlock or remove
   the lock until it auto-expires. You will need to log out and log in again.
