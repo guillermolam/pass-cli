@@ -17,16 +17,16 @@
  *
  */
 
+use crate::PassClient;
+pub use crate::PlanType;
 use crate::common::{CodeResponse, SUCCESS_CODE};
 use crate::test_tools::client_features::TestClientFeatures;
 use crate::test_tools::{init_session, setup_user_access};
-use crate::PassClient;
-pub use crate::PlanType;
 use muon::common::sdk::Sdk;
 pub use muon::http::Method;
 use muon_test::server::{ProtonAPI, Request, Response};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub type TestPassClient = PassClient<muon_test::server::TestContext<()>>;
 
