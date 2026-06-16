@@ -18,7 +18,7 @@
  */
 
 use crate::storage::SessionStorage;
-use anyhow::{Context, anyhow};
+use anyhow::{anyhow, Context};
 use muon::app::{AppName, AppVersion, SemVer};
 use muon::auth::Auth;
 use muon::common::Server;
@@ -30,8 +30,8 @@ use pass_domain::crypto::EncryptionTag;
 use pass_domain::{AccountType, LocalKeyProvider};
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 pub type PassSessionKeyType = ();
 
@@ -153,16 +153,16 @@ pub struct SerializedStore {
     pub env: SerializedEnv,
     #[serde(default = "default_account_type")]
     pub account_type: AccountType,
-    #[serde(default = "default_session_has_lock")]
-    pub session_has_lock: bool,
+    #[serde(default = "default_lock_after_seconds")]
+    pub session_lock_after_seconds: Option<u32>,
 }
 
 fn default_account_type() -> AccountType {
     AccountType::User
 }
 
-const fn default_session_has_lock() -> bool {
-    false
+const fn default_lock_after_seconds() -> Option<u32> {
+    None
 }
 
 #[derive(Clone)]
@@ -172,7 +172,7 @@ pub struct PassSessionStore {
     pub storage: Arc<dyn SessionStorage>,
     pub key_provider: Arc<dyn LocalKeyProvider>,
     pub account_type: AccountType,
-    pub session_has_lock: bool,
+    pub session_lock_after_seconds: Option<u32>,
     persist_generation: Arc<AtomicU64>,
     persist_lock: Arc<tokio::sync::Mutex<()>>,
 }
@@ -182,7 +182,10 @@ impl std::fmt::Debug for PassSessionStore {
         f.debug_struct("PassSessionStore")
             .field("env", &self.env)
             .field("account_type", &self.account_type)
-            .field("session_lock", &self.session_has_lock)
+            .field(
+                "session_lock_after_seconds",
+                &self.session_lock_after_seconds,
+            )
             .finish()
     }
 }
@@ -302,7 +305,7 @@ impl PassSessionStore {
             storage,
             key_provider,
             account_type: AccountType::User, // Default to User for new stores
-            session_has_lock: false,
+            session_lock_after_seconds: None,
             persist_generation: Arc::new(AtomicU64::new(0)),
             persist_lock: Arc::new(tokio::sync::Mutex::new(())),
         }
@@ -369,7 +372,7 @@ impl PassSessionStore {
             storage,
             key_provider,
             account_type: deserialized.account_type,
-            session_has_lock: deserialized.session_has_lock,
+            session_lock_after_seconds: deserialized.session_lock_after_seconds,
             persist_generation: Arc::new(AtomicU64::new(0)),
             persist_lock: Arc::new(tokio::sync::Mutex::new(())),
         }))
@@ -382,7 +385,7 @@ impl PassSessionStore {
                 env: SerializedEnv::from(self.env.clone()),
                 auth: auth.clone(),
                 account_type: self.account_type,
-                session_has_lock: self.session_has_lock,
+                session_lock_after_seconds: self.session_lock_after_seconds,
             }
         };
 
@@ -427,12 +430,12 @@ impl PassSessionStore {
         }
     }
 
-    pub fn has_session_lock(&self) -> bool {
-        self.session_has_lock
+    pub fn get_session_lock_after_seconds(&self) -> Option<u32> {
+        self.session_lock_after_seconds
     }
 
-    pub fn set_has_session_lock(&mut self, has_lock: bool) {
-        self.session_has_lock = has_lock;
+    pub fn set_session_lock_after_seconds(&mut self, lock_time: Option<u32>) {
+        self.session_lock_after_seconds = lock_time;
         self.schedule_persist();
     }
 }

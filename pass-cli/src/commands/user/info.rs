@@ -34,7 +34,7 @@ struct UserInfoJsonOutput {
     pub totp_limit: Option<u16>,
     pub storage_used: u64,
     pub storage_quota: u64,
-    pub session_has_lock: bool,
+    pub session_lock_after_seconds: Option<u32>,
 }
 
 pub async fn run(
@@ -47,7 +47,7 @@ pub async fn run(
         anyhow::anyhow!("No addresses found. Please add an address to your account.")
     })?;
     let user_info = client.get_user_access().await?;
-    let session_has_lock = store.read().has_session_lock();
+    let session_lock_after_seconds = store.read().get_session_lock_after_seconds();
 
     match output_format {
         OutputFormat::Human => {
@@ -75,8 +75,8 @@ pub async fn run(
                 user_info.plan.storage_used / (1 << 20),
                 user_info.plan.storage_quota / (1 << 20)
             );
-            if session_has_lock {
-                println!("Session has a lock")
+            if let Some(lock_seconds) = session_lock_after_seconds {
+                println!("Session will lock after {lock_seconds} seconds of inactivity")
             }
         }
         OutputFormat::Json => {
@@ -89,7 +89,7 @@ pub async fn run(
                 totp_limit: user_info.plan.totp_limit,
                 storage_used: user_info.plan.storage_used,
                 storage_quota: user_info.plan.storage_quota,
-                session_has_lock,
+                session_lock_after_seconds,
             };
             let as_json =
                 serde_json::to_string_pretty(&out).context("Error serializing user info")?;

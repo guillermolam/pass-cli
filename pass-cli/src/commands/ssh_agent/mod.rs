@@ -252,7 +252,7 @@ async fn run_start(
     client: PassClient,
     store: Arc<RwLock<PassSessionStore>>,
 ) -> Result<()> {
-    let session_has_lock = store.read().has_session_lock();
+    let session_has_lock = store.read().get_session_lock_after_seconds().is_some();
 
     if session_has_lock {
         eprintln!(

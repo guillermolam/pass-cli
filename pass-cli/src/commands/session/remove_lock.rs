@@ -19,17 +19,17 @@
 
 use crate::helpers::CliPassClient as PassClient;
 use crate::utils::ask_for_input;
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use parking_lot::RwLock;
 use pass_auth::store::PassSessionStore;
 use std::sync::Arc;
 
 pub async fn run(client: PassClient, store: Arc<RwLock<PassSessionStore>>) -> Result<()> {
-    if !store.read().has_session_lock() {
+    if store.read().get_session_lock_after_seconds().is_none() {
         bail!("Session is not locked");
     }
 
-    let pin = ask_for_input("Enter PIN: ", true).context("Error reading PIN")?;
+    let pin = ask_for_input("Enter lock code: ", true).context("Error reading lock code")?;
 
     client
         .remove_session_lock(&pin)
@@ -38,7 +38,7 @@ pub async fn run(client: PassClient, store: Arc<RwLock<PassSessionStore>>) -> Re
 
     let snapshot = {
         let mut guard = store.write();
-        guard.set_has_session_lock(false);
+        guard.set_session_lock_after_seconds(None);
         guard.clone()
     };
     snapshot
