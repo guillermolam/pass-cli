@@ -18,22 +18,32 @@
  */
 
 use crate::commands::item::agent_monitor::send_reason_if_agent;
+use crate::commands::item::totp::generate_totp_token;
 use crate::helpers::CliPassClient as PassClient;
 use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
+use fluent_uri::Uri;
 use pass::FindItemQuery;
-use pass_domain::{EventAction, ItemId, ShareId};
-use regex::Regex;
+use pass_domain::{EventAction, Field, ItemId, ShareId};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use urlencoding::decode;
+
+/// Controls what is returned when resolving a TOTP field.
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub enum TotpOutput {
+    #[default]
+    Code,
+    Uri,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ItemReference {
     pub share_id: String,
     pub item_id: String,
     pub field_name: Option<String>,
+    pub totp: Option<TotpOutput>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -41,95 +51,141 @@ pub struct SecretReference {
     pub share_id: String,
     pub item_id: String,
     pub field_name: String,
+    pub totp: Option<TotpOutput>,
 }
 
 impl ItemReference {
     pub fn parse(uri: &str) -> Result<Self> {
-        // Check for trailing slash first - this is invalid
-        if uri.ends_with('/') {
+        // Percent-encode spaces; raw spaces are not valid URI characters,
+        // but we allow them as a convenience.
+        let normalized = uri.trim().replace(' ', "%20");
+
+        // ensure_format borrows normalized and returns a Uri<&str> tied to it.
+        let parsed = Self::ensure_format(&normalized)?;
+
+        let auth = parsed.authority().ok_or_else(|| {
+            anyhow!(
+                "Invalid reference format. Expected: pass://SHARE_ID/ITEM_ID[/FIELD], got: [{}]",
+                uri
+            )
+        })?;
+
+        // host() returns the raw percent-encoded host string for any host variant.
+        let host_enc = auth.host();
+        if host_enc.is_empty() {
             return Err(anyhow!(
-                "Invalid reference format: trailing slash not allowed. Expected: pass://SHARE_ID/ITEM_ID or pass://SHARE_ID/ITEM_ID/FIELD, got: {}",
+                "Invalid reference format. Expected: pass://SHARE_ID/ITEM_ID[/FIELD], got: [{}]",
+                uri
+            ));
+        }
+        let share_id = decode(host_enc)
+            .with_context(|| format!("Failed to URL-decode share_id: {}", host_enc))?
+            .into_owned();
+
+        // segments_if_absolute() splits /item_id/field on '/' and yields EStr segments.
+        let mut segments = parsed
+            .path()
+            .segments_if_absolute()
+            .ok_or_else(|| {
+                anyhow!(
+                    "Cannot extract segments. Invalid reference format. Expected: pass://SHARE_ID/ITEM_ID[/FIELD], got: [{}]",
+                    uri
+                )
+            })?;
+
+        let item_id_seg = segments
+            .next()
+            .filter(|s| !s.as_str().is_empty())
+            .ok_or_else(|| {
+                anyhow!(
+                    "Cannot extract item segment. Invalid reference format. Expected: pass://SHARE_ID/ITEM_ID[/FIELD], got: [{}]",
+                    uri
+                )
+            })?;
+        let item_id = item_id_seg
+            .decode()
+            .to_string()
+            .map(|c| c.into_owned())
+            .map_err(|_| anyhow!("item_id contains non-UTF-8 characters in: {}", uri))?;
+
+        // Remaining segments form the field name (joined by '/' to preserve sub-paths).
+        let field_parts: Vec<String> = segments
+            .filter(|s| !s.as_str().is_empty())
+            .map(|s| {
+                s.decode()
+                    .to_string()
+                    .map(|c| c.into_owned())
+                    .map_err(|_| anyhow!("field segment contains non-UTF-8 characters"))
+            })
+            .collect::<Result<_>>()?;
+        let field_name = if field_parts.is_empty() {
+            None
+        } else {
+            Some(field_parts.join("/"))
+        };
+
+        // ?totp=uri  -> return the raw otpauth:// URI stored in the field
+        // ?totp=code -> return the computed TOTP code
+        let totp_str = parsed.query().and_then(|q| {
+            q.as_str().split('&').find_map(|pair| {
+                let (key, value) = pair.split_once('=')?;
+                if key == "totp" { Some(value) } else { None }
+            })
+        });
+        let totp = match totp_str {
+            Some("uri") => Some(TotpOutput::Uri),
+            Some("code") => Some(TotpOutput::Code),
+            Some("") | None => None,
+            Some(other) => {
+                return Err(anyhow!(
+                    "Unknown totp output format '{}'. Expected 'uri' or 'code', in: {}",
+                    other,
+                    uri
+                ));
+            }
+        };
+
+        Ok(ItemReference {
+            share_id,
+            item_id,
+            field_name,
+            totp,
+        })
+    }
+
+    // Takes a borrowed str so the returned Uri<&str> can borrow from it without
+    // the ownership transfer that would drop the backing string too early.
+    fn ensure_format(uri: &str) -> Result<Uri<&str>> {
+        let parsed = Uri::parse(uri).map_err(|_| {
+            anyhow!(
+                "Invalid reference format. Expected: pass://SHARE_ID/ITEM_ID[/FIELD], got: [{}]",
+                uri
+            )
+        })?;
+
+        if parsed.scheme().as_str() != "pass" {
+            return Err(anyhow!(
+                "Invalid reference format. Expected: pass://SHARE_ID/ITEM_ID[/FIELD], got: [{}]",
                 uri
             ));
         }
 
-        // Try to parse with field first (3 parts) - field must be non-empty
-        let re_with_field = Regex::new(r"^pass://([^/]+)/([^/]+)/(.+)$")
-            .map_err(|e| anyhow!("Failed to compile regex: {}", e))?;
-
-        if let Some(captures) = re_with_field.captures(uri) {
-            let share_id = captures
-                .get(1)
-                .ok_or_else(|| anyhow!("Missing share_id in reference"))?
-                .as_str();
-
-            let item_id = captures
-                .get(2)
-                .ok_or_else(|| anyhow!("Missing item_id in reference"))?
-                .as_str();
-
-            let field_name = captures.get(3).map(|m| m.as_str());
-
-            // URL-decode the components
-            let share_id = decode(share_id)
-                .with_context(|| format!("Failed to URL-decode share_id: {}", share_id))?
-                .to_string();
-            let item_id = decode(item_id)
-                .with_context(|| format!("Failed to URL-decode item_id: {}", item_id))?
-                .to_string();
-            let field_name = field_name
-                .map(|f| {
-                    decode(f)
-                        .with_context(|| format!("Failed to URL-decode field_name: {}", f))
-                        .map(|s| s.to_string())
-                })
-                .transpose()?;
-
-            return Ok(ItemReference {
-                share_id,
-                item_id,
-                field_name,
-            });
+        if parsed.path().as_str().ends_with('/') {
+            return Err(anyhow!(
+                "Invalid reference format: trailing slash not allowed. Expected: pass://SHARE_ID/ITEM_ID[/FIELD], got: [{}]",
+                uri
+            ));
         }
 
-        // Try to parse without field (2 parts)
-        let re_without_field = Regex::new(r"^pass://([^/]+)/([^/]+)$")
-            .map_err(|e| anyhow!("Failed to compile regex: {}", e))?;
-
-        if let Some(captures) = re_without_field.captures(uri) {
-            let share_id = captures
-                .get(1)
-                .ok_or_else(|| anyhow!("Missing share_id in reference"))?
-                .as_str();
-
-            let item_id = captures
-                .get(2)
-                .ok_or_else(|| anyhow!("Missing item_id in reference"))?
-                .as_str();
-
-            // URL-decode the components
-            let share_id = decode(share_id)
-                .with_context(|| format!("Failed to URL-decode share_id: {}", share_id))?
-                .to_string();
-            let item_id = decode(item_id)
-                .with_context(|| format!("Failed to URL-decode item_id: {}", item_id))?
-                .to_string();
-
-            return Ok(ItemReference {
-                share_id,
-                item_id,
-                field_name: None,
-            });
-        }
-
-        Err(anyhow!(
-            "Invalid reference format. Expected: pass://SHARE_ID/ITEM_ID or pass://SHARE_ID/ITEM_ID/FIELD, got: {}",
-            uri
-        ))
+        Ok(parsed)
     }
 }
 
 impl SecretReference {
+    pub fn totp_output(&self) -> TotpOutput {
+        self.totp.unwrap_or_default()
+    }
+
     pub fn parse(uri: &str) -> Result<Self> {
         let item_ref = ItemReference::parse(uri)?;
 
@@ -140,6 +196,7 @@ impl SecretReference {
             share_id: item_ref.share_id,
             item_id: item_ref.item_id,
             field_name,
+            totp: item_ref.totp,
         })
     }
 }
@@ -189,7 +246,14 @@ impl SecretResolver for PassClientResolver {
                 secret_ref.item_id
             )
         })?;
-        Ok(field.value())
+
+        match field {
+            Field::Totp(totp_uri) => match secret_ref.totp_output() {
+                TotpOutput::Uri => Ok(totp_uri),
+                TotpOutput::Code => generate_totp_token(&totp_uri),
+            },
+            _ => Ok(field.value()),
+        }
     }
     async fn resolve_secret_and_send_reason(&self, secret_ref: &SecretReference) -> Result<String> {
         let share_id = ShareId::new(secret_ref.share_id.clone());
@@ -221,9 +285,14 @@ impl SecretCache {
         secret_ref: &SecretReference,
         resolver: &R,
     ) -> Result<String> {
+        let totp_key = match secret_ref.totp {
+            Some(TotpOutput::Uri) => "uri",
+            Some(TotpOutput::Code) => "code",
+            None => "",
+        };
         let cache_key = format!(
-            "{}:{}:{}",
-            secret_ref.share_id, secret_ref.item_id, secret_ref.field_name
+            "{}:{}:{}:{}",
+            secret_ref.share_id, secret_ref.item_id, secret_ref.field_name, totp_key
         );
 
         // Check cache first
@@ -513,6 +582,7 @@ pub(crate) mod tests {
             share_id: "test".to_string(),
             item_id: "item".to_string(),
             field_name: "field".to_string(),
+            totp: None,
         };
 
         // First call should resolve and cache
@@ -522,5 +592,83 @@ pub(crate) mod tests {
         // Second call should use cache
         let value2 = cache.get_or_resolve(&secret_ref, &resolver).await.unwrap();
         assert_eq!(value2, "cached_value");
+    }
+
+    #[test]
+    fn item_reference_parse_with_totp_code() {
+        let uri = "pass://share123/item456/password?totp=code";
+        let result = ItemReference::parse(uri).unwrap();
+        assert_eq!(result.share_id, "share123");
+        assert_eq!(result.item_id, "item456");
+        assert_eq!(result.field_name, Some("password".to_string()));
+        assert_eq!(result.totp, Some(TotpOutput::Code));
+    }
+
+    #[test]
+    fn item_reference_parse_with_totp_uri() {
+        let uri = "pass://share123/item456/password?totp=uri";
+        let result = ItemReference::parse(uri).unwrap();
+        assert_eq!(result.share_id, "share123");
+        assert_eq!(result.item_id, "item456");
+        assert_eq!(result.field_name, Some("password".to_string()));
+        assert_eq!(result.totp, Some(TotpOutput::Uri));
+    }
+
+    #[test]
+    fn item_reference_parse_without_totp() {
+        let uri = "pass://share123/item456/password";
+        let result = ItemReference::parse(uri).unwrap();
+        assert_eq!(result.totp, None);
+    }
+
+    #[test]
+    fn item_reference_parse_totp_ignores_other_params() {
+        let uri = "pass://share123/item456/password?other=value&totp=code";
+        let result = ItemReference::parse(uri).unwrap();
+        assert_eq!(result.totp, Some(TotpOutput::Code));
+    }
+
+    #[test]
+    fn item_reference_parse_empty_totp_treated_as_absent() {
+        let uri = "pass://share123/item456/password?totp=";
+        let result = ItemReference::parse(uri).unwrap();
+        assert_eq!(result.totp, None);
+    }
+
+    #[test]
+    fn item_reference_parse_unknown_totp_value_is_error() {
+        let uri = "pass://share123/item456/password?totp=invalid";
+        let result = ItemReference::parse(uri);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Unknown totp output format")
+        );
+    }
+
+    #[test]
+    fn secret_reference_parse_propagates_totp_uri() {
+        let uri = "pass://share123/item456/password?totp=uri";
+        let result = SecretReference::parse(uri).unwrap();
+        assert_eq!(result.share_id, "share123");
+        assert_eq!(result.item_id, "item456");
+        assert_eq!(result.field_name, "password");
+        assert_eq!(result.totp, Some(TotpOutput::Uri));
+    }
+
+    #[test]
+    fn secret_reference_parse_propagates_totp_code() {
+        let uri = "pass://share123/item456/password?totp=code";
+        let result = SecretReference::parse(uri).unwrap();
+        assert_eq!(result.totp, Some(TotpOutput::Code));
+    }
+
+    #[test]
+    fn secret_reference_parse_no_totp() {
+        let uri = "pass://share123/item456/password";
+        let result = SecretReference::parse(uri).unwrap();
+        assert_eq!(result.totp, None);
     }
 }
