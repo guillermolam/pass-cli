@@ -120,6 +120,41 @@ pass://Work/Deploy Targets/password
 
     Only fields inside custom sections of an identity item use the `SectionName.fieldname` qualified syntax.
 
+## TOTP fields
+
+When a field is of TOTP type, the secret reference resolves to the **current TOTP code** by default. You can control this behaviour with the `?totp=` query parameter:
+
+| Query parameter | Result |
+|---|---|
+| _(none)_ or `?totp=code` | Computed TOTP code (e.g. `482910`) |
+| `?totp=uri` | Raw `otpauth://` URI stored in the field |
+
+### Examples
+
+```text
+# Resolve to the current TOTP code (default)
+pass://Work/GitHub/totp
+pass://Work/GitHub/totp?totp=code
+
+# Resolve to the raw otpauth:// URI
+pass://Work/GitHub/totp?totp=uri
+```
+
+This works everywhere secret references are accepted: `item view`, `run`, and `inject`.
+
+```bash
+# Inject the current TOTP code into a command's environment
+export OTP='pass://Work/GitHub/totp'
+pass-cli run -- ./deploy.sh
+
+# Retrieve the raw otpauth URI (e.g. to re-import into an authenticator app)
+pass-cli item view "pass://Work/GitHub/totp?totp=uri"
+```
+
+!!! note "Non-TOTP fields"
+
+    The `?totp=` parameter is only meaningful on fields that are stored as TOTP type in Proton Pass. Appending it to a text or hidden field has no effect.
+
 ## Rules and limitations
 
 ### Required components

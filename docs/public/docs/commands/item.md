@@ -356,7 +356,7 @@ pass-cli item view [OPTIONS] [URI]
 - `--vault-name VAULT_NAME` - Name of the vault containing the item (optional if default vault is set and not using URI)
 - `--item-id ITEM_ID` - ID of the item
 - `--item-title ITEM_TITLE` - Title of the item
-- `URI` - Pass URI in format `pass://SHARE_ID/ITEM_ID[/FIELD]`
+- `URI` - Pass URI in format `pass://SHARE_ID/ITEM_ID[/FIELD][?totp=code|uri]`
 - `--field FIELD` - Specific field to view
 - `--output FORMAT` - Output format: `human` or `json`. Uses default format from settings if not specified.
 
@@ -392,6 +392,12 @@ pass-cli item view --share-id "abc123def" --item-id "item456" --field "username"
 
 # View item in JSON format
 pass-cli item view --share-id "abc123def" --item-id "item456" --output json
+
+# View a TOTP field (prints the current code by default)
+pass-cli item view "pass://abc123def/item456/totp"
+
+# View a TOTP field and get the raw otpauth:// URI
+pass-cli item view "pass://abc123def/item456/totp?totp=uri"
 ```
 
 ### update
@@ -671,15 +677,19 @@ When using `--get-template` or `--from-template`, the JSON structure is:
 
 Generate TOTP codes for the fields of an item. If you have an item that has TOTP fields associated to it, you can get the values of the TOTPs by using `item totp`.
 
+!!! tip "TOTP via secret references"
+
+    You can also retrieve a TOTP code (or its underlying `otpauth://` URI) directly through a secret reference by appending `?totp=code` or `?totp=uri` to any `pass://` URI that points to a TOTP field. This works with `item view`, `run`, and `inject`. See [Secret references: TOTP fields](contents/secret-references.md#totp-fields) for details.
+
 **Options:**
 
-- `--share-id SHARE_ID` - Share ID of the vault containing the item (optional if default vault is set and not using URI)
-- `--vault-name VAULT_NAME` - Name of the vault containing the item (optional if default vault is set and not using URI)
-- `--item-id ITEM_ID` - ID of the item
-- `--item-title ITEM_TITLE` - Title of the item
-- `URI` - Pass URI in format `pass://SHARE_ID/ITEM_ID[/FIELD]`
-- `--field FIELD` - Specific field to view
-- `--output FORMAT` - Output format: `human` or `json`. Uses default format from settings if not specified.
+- `--share-id SHARE_ID`: Share ID of the vault containing the item (optional if default vault is set and not using URI)
+- `--vault-name VAULT_NAME`: Name of the vault containing the item (optional if default vault is set and not using URI)
+- `--item-id ITEM_ID`: ID of the item
+- `--item-title ITEM_TITLE`: Title of the item
+- `URI`: Pass URI in format `pass://SHARE_ID/ITEM_ID[/FIELD]`
+- `--field FIELD`: Specific field to view
+- `--output FORMAT`: Output format: `human` or `json`. Uses default format from settings if not specified.
 
 **Mutually exclusive options:**
 
